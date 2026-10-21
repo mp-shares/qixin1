@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>栖心一班班级看板</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
+<style>
+/* Layout: sticky nav → masthead → four bands: ① 活动照片（snap carousel, auto-advance, caption over image）② 班级公示（static stat cards, balance card tinted）③ 项目入口（monogram cards）④ 义工操作区（tinted restricted band）. Content lives in SLIDES_STATIC / PROJECTS / STAFF at the top of the script. */
+:root{
+  --bg:#f4f5f8; --card:#ffffff; --ink:#1b2130; --muted:#6b7386; --line:#e0e4ec; --soft:#eef0f5;
+  --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
+  --in:#1d7a4e; --in-bg:#e3f3ea; --out:#b6412b; --lock:#8a6a1a; --lock-bg:#faf1d8; --lock-band:#f8f3e6;
+  --shadow:0 1px 2px rgba(20,25,40,.05),0 8px 24px -12px rgba(20,25,40,.18);
+  --display:'Noto Serif SC','Songti SC','SimSun',serif;
+  --body:system-ui,-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12151c; --card:#1b1f29; --ink:#e7e9ef; --muted:#9aa3b5; --line:#2c3341; --soft:#232835;
+  --accent:#9aa7f3; --accent-ink:#10142a; --accent-soft:#242a45; --accent-deep:#c3cbfa;
+  --in:#62cf93; --in-bg:#163322; --out:#f29078; --lock:#e2c15c; --lock-bg:#3a3116; --lock-band:#1d1a14;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.6); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#12151c; --card:#1b1f29; --ink:#e7e9ef; --muted:#9aa3b5; --line:#2c3341; --soft:#232835;
+  --accent:#9aa7f3; --accent-ink:#10142a; --accent-soft:#242a45; --accent-deep:#c3cbfa;
+  --in:#62cf93; --in-bg:#163322; --out:#f29078; --lock:#e2c15c; --lock-bg:#3a3116; --lock-band:#1d1a14;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.6); color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} *{transition:none!important} }
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;margin:0;padding-block:0 56px}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--accent)}
+
+/* nav */
+nav.top{position:sticky;top:0;z-index:9;background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+nav.top .in{max-width:720px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;height:54px}
+nav.top .brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:17px;white-space:nowrap;color:var(--ink);text-decoration:none}
+nav.top .seal{width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:13px;font-weight:700;letter-spacing:0}
+nav.top .brand small{font-family:var(--body);font-weight:500;font-size:11px;color:var(--muted);letter-spacing:.08em}
+nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:2px}
+nav.top a.nl{color:var(--muted);text-decoration:none;font-size:14px;padding:6px 11px;border-radius:999px;white-space:nowrap;transition:background .15s,color .15s}
+nav.top a.nl:hover,nav.top a.nl.on{background:var(--accent-soft);color:var(--accent-deep)}
+nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:440px){ nav.top .brand small{display:none} nav.top a.nl{padding:6px 8px;font-size:13px} }
+
+/* masthead */
+.wrap{max-width:720px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:30px;padding-top:26px}
+.mast{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.mast .eb{font-size:12px;letter-spacing:.16em;color:var(--accent);font-weight:600;text-transform:uppercase}
+.mast h1{font-family:var(--display);font-size:32px;font-weight:700;margin:2px 0 0;letter-spacing:.02em;line-height:1.2;text-wrap:balance}
+.mast .date{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;padding-bottom:6px}
+
+/* bands */
+.band{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;scroll-margin-top:70px;min-width:0}
+.band>h2{font-family:var(--display);font-size:19px;font-weight:700;margin:0;display:flex;align-items:center;gap:10px}
+.band>h2::before{content:"";width:6px;height:20px;border-radius:3px;background:var(--accent)}
+.band>h2 small{font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.06em;margin-left:auto}
+.band.staff{background:var(--lock-band);border:1px solid var(--line);border-radius:18px;padding:18px 18px 20px}
+.band.staff>h2::before{background:var(--lock)}
+
+/* ① carousel */
+.carousel{position:relative;min-width:0;max-width:100%}
+.track{display:flex;gap:12px;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.track::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;scroll-snap-align:start;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 20px;min-height:150px;display:grid;align-content:start;gap:6px;min-width:0;box-shadow:var(--shadow)}
+.slide .k{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.slide .t{font-family:var(--display);font-size:20px;font-weight:700;line-height:1.3;text-wrap:balance}
+.slide .d{font-size:13.5px;color:var(--muted)}
+.slide.photo{padding:0;overflow:hidden;background:var(--soft);min-height:0;position:relative;border:0}
+.slide.photo img{display:block;width:100%;height:320px;object-fit:cover}
+.slide.photo .cap{position:absolute;inset:auto 0 0 0;padding:34px 18px 14px;background:linear-gradient(to top,rgba(10,12,20,.72),rgba(10,12,20,0));color:#fff;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.slide.photo .cap b{font-family:var(--display);font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.slide.photo .cap a{color:#fff;font-size:12.5px;white-space:nowrap;text-decoration:none;opacity:.9;border:1px solid rgba(255,255,255,.5);border-radius:999px;padding:3px 10px}
+.slide.photo .cap a:hover{background:rgba(255,255,255,.15)}
+@media (max-width:520px){ .slide.photo img{height:230px} .slide.photo .cap{padding:28px 14px 12px} }
+.dots{display:flex;justify-content:center;gap:6px;margin-top:10px}
+.dots button{width:7px;height:7px;border-radius:50%;border:0;background:var(--line);padding:0;cursor:pointer;transition:width .2s,background .2s}
+.dots button[aria-current="true"]{background:var(--accent);width:20px;border-radius:4px}
+.dots button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ② stat cards */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:grid;align-content:start;gap:6px;min-width:0;box-shadow:var(--shadow)}
+.stat.hero{grid-column:1/-1;background:linear-gradient(135deg,var(--accent-soft),var(--card) 60%)}
+.stat .k{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
+.stat .k i{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}
+.stat .k i.in{background:var(--in)} .stat .k i.out{background:var(--out)}
+.stat .big{font-family:var(--display);font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1;letter-spacing:-.01em}
+.stat.hero .big{font-size:44px}
+.stat .big.in{color:var(--in)}
+.stat .big small{font-size:15px;font-family:var(--body);font-weight:500;color:var(--muted);letter-spacing:0}
+.stat .d{font-size:13px;color:var(--muted);overflow-wrap:anywhere;line-height:1.6}
+.stat .d b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.stat .pl{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.stat .pl span{font-size:12.5px;padding:3px 10px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.stat .pl span b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;margin-left:4px}
+.stat .mini{display:grid;gap:6px;margin-top:6px}
+.stat .mini div{display:grid;grid-template-columns:minmax(70px,34%) 1fr auto;gap:8px;align-items:center;font-size:13px}
+.stat .mini .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.stat .mini .tr{height:8px;background:var(--soft);border-radius:4px;overflow:hidden;position:relative}
+.stat .mini .tr b{position:absolute;inset:0 auto 0 0;background:var(--in);border-radius:4px;min-width:2px}
+.stat .mini .tr b.o{background:var(--out)}
+.stat .mini .amt{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+.stat.empty-state{color:var(--muted);font-size:13.5px}
+
+/* ③ ④ cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+a.card{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto auto;gap:4px 14px;align-content:start;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;color:inherit;text-decoration:none;min-width:0;box-shadow:var(--shadow);transition:transform .15s,border-color .15s}
+a.card:hover{transform:translateY(-2px);border-color:var(--accent)}
+a.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card .mg{grid-row:1/4;width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center;font-family:var(--display);font-size:20px;font-weight:700}
+.band.staff .card .mg{background:var(--lock-bg);color:var(--lock)}
+.card .t{font-family:var(--display);font-size:17px;font-weight:700;line-height:1.3;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.card .t .go{font-family:var(--body);color:var(--accent);font-size:13px;font-weight:500;white-space:nowrap}
+.card .d{font-size:13.5px;color:var(--muted);min-width:0;line-height:1.5}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.tag{font-size:11.5px;padding:2px 9px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.tag.lock{background:var(--lock-bg);color:var(--lock)}
+footer{font-size:12.5px;color:var(--muted);line-height:1.7;padding:0 4px;border-top:1px solid var(--line);padding-top:16px}
+footer b{color:var(--ink);font-weight:600}
+</style>
+</head>
+<body>
+<nav class="top gutter">
+  <div class="in">
+    <a class="brand" href="#top"><span class="seal">栖</span>栖心一班<small>班级看板</small></a>
+    <ul>
+      <li><a class="nl" href="#photos" data-nav="photos">照片</a></li>
+      <li><a class="nl" href="#show" data-nav="show">公示</a></li>
+      <li><a class="nl" href="#projects" data-nav="projects">项目</a></li>
+      <li><a class="nl" href="#staff" data-nav="staff">义工区</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="wrap gutter" id="top">
+  <header class="mast">
+    <div><div class="eb">MindfulPeace · 静心学堂</div><h1>栖心一班 · 班级看板</h1></div>
+    <div class="date" id="today"></div>
+  </header>
+
+  <section class="band" id="photos" hidden>
+    <h2>活动照片</h2>
+    <div class="carousel">
+      <div class="track" id="track" aria-live="polite"></div>
+      <div class="dots" id="dots"></div>
+    </div>
+  </section>
+
+  <section class="band" id="show">
+    <h2>班级公示</h2>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <section class="band" id="projects">
+    <h2>项目入口</h2>
+    <div class="cards" id="projectCards"></div>
+  </section>
+
+  <section class="band staff" id="staff">
+    <h2>义工操作区 <small>凭口令进入</small></h2>
+    <div class="cards" id="staffCards"></div>
+  </section>
+
+  <footer>班费收入分<b>随喜供养</b>（非限定用途）与<b>专项供养</b>（指定用途）两类。公示只显示汇总，明细与凭证由记账义工保管。</footer>
+</div>
+
+<script src="banfei.config.js"></script>
+<script src="gate.js"></script>
+<script>
+(function () {
+  /* 内容配置（维护者看，不显示）：SLIDES_STATIC 固定轮播页 {k,t,d}；PROJECTS 项目卡 {mg 单字标记,t,d,url}；STAFF 义工区 {mg,t,d,url,who,key}。
+     轮播照片：Drive「DC1班活动图片归档/看板轮播」有图优先，否则自动取最新活动的精选或最新几张。公示更新：账本「公示」页点「发布到公示页」。 */
+  var SLIDES_STATIC = []; // 需要固定通知页时在这里加 { k, t, d }
+  var PROJECTS = [
+    { mg: '费', t: '班费公示', d: '结余、每周每月收入、支出分类汇总。', url: '班费公示.html' },
+    { mg: '岗', t: '微岗位认领', d: '20 个微岗位谁在承担，各组修时间谁方便。', url: '微岗位报名.html' },
+    { mg: '影', t: '活动照片', d: '班级活动相册，按活动分文件夹。', url: 'https://drive.google.com/drive/folders/1VyvDqOVdxgjbgbljwmcKTbEDVvTFg0DP' }
+  ];
+  var STAFF = [
+    { mg: '账', t: '班费账本', d: '录入收支与凭证，发布公示。', url: '班费账本.html', who: '记账义工', key: '记账口令' },
+    { mg: '编', t: '微岗位报名管理', d: '添加、修改同学的报名，复制统计。', url: '微岗位报名.html', who: '班委', key: '班委口令' }
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var fmt = function (n) { return (n < 0 ? '-' : '') + '$' + Math.abs(+n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  var md = function (s) { var a = String(s).split('-'); return +a[1] + '/' + +a[2]; };
+  var API = (window.BANFEI_API || '').trim();
+  var now = new Date();
+  $('today').textContent = now.getFullYear() + ' 年 ' + (now.getMonth() + 1) + ' 月 ' + now.getDate() + ' 日 · ' + ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][now.getDay()];
+
+  // ③ ④
+  var card = function (p, lock) {
+    var ext = /^https?:/.test(p.url);
+    var tags = lock ? '<span class="tags"><span class="tag">' + esc(p.who) + '</span><span class="tag lock">' + esc(p.key) + '</span></span>' : '<span class="tags"></span>';
+    return '<a class="card" href="' + esc(p.url) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '><span class="mg">' + esc(p.mg) + '</span><span class="t">' + esc(p.t) + '<span class="go">打开 ' + (ext ? '↗' : '›') + '</span></span><span class="d">' + esc(p.d) + '</span>' + tags + '</a>';
+  };
+  $('projectCards').innerHTML = PROJECTS.map(function (p) { return card(p, false); }).join('');
+  $('staffCards').innerHTML = STAFF.map(function (p) { return card(p, true); }).join('');
+
+  // ① 照片轮播
+  var fee = null, signups = null, photos = [];
+  var PHOTO_ALBUM = 'https://drive.google.com/drive/folders/1VyvDqOVdxgjbgbljwmcKTbEDVvTFg0DP';
+  function photoSlide(p) {
+    var src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(p.id) + '&sz=w1000';
+    return '<div class="slide photo"><img data-src="' + src + '" alt="' + esc(p.name) + '"><div class="cap"><b>' + esc(p.name) + '</b><a href="' + PHOTO_ALBUM + '" target="_blank" rel="noopener">更多照片 ↗</a></div></div>';
+  }
+  function slides() {
+    var out = SLIDES_STATIC.map(function (s) { return '<div class="slide"><div class="k">' + esc(s.k) + '</div><div class="t">' + esc(s.t) + '</div><div class="d">' + s.d + '</div></div>'; });
+    return out.concat(photos.map(photoSlide));
+  }
+
+  // ② 公示卡片
+  function mini(items, key, lblFn, cls) {
+    if (!items || !items.length) return '';
+    var max = Math.max.apply(null, [1].concat(items.map(function (x) { return +x[key] || 0; })));
+    return '<div class="mini">' + items.slice(0, 4).map(function (x, i) { return '<div><span class="lbl">' + lblFn(x, i) + '</span><span class="tr"><b class="' + cls + '" style="width:' + ((+x[key] || 0) / max * 100) + '%"></b></span><span class="amt">' + fmt(x[key]) + '</span></div>'; }).join('') + '</div>';
+  }
+  function renderStats() {
+    var out = [];
+    if (fee) {
+      var restricted = fee.restricted || [], rBal = restricted.reduce(function (a, p) { return a + (+p.balance || 0); }, 0);
+      out.push('<div class="stat hero"><div class="k"><i></i>班费 · 当前结余</div><div class="big">' + fmt(fee.balance) + '</div><div class="pl"><span>随喜供养<b>' + fmt(fee.unrestricted) + '</b></span><span>专项供养<b>' + fmt(rBal) + '</b></span>' + restricted.map(function (p) { return '<span>' + esc(p.purpose) + '<b>' + fmt(p.balance) + '</b></span>'; }).join('') + '</div><div class="d">截至 ' + esc(fee.asOf) + ' · <a href="班费公示.html">完整公示 ›</a></div></div>');
+      var weekly = (fee.weekly || []).slice(0, 4);
+      out.push('<div class="stat"><div class="k"><i class="in"></i>本周与本月</div><div class="big in">' + fmt(fee.thisWeek ? fee.thisWeek.in : 0) + '</div><div class="d">本周收入' + (fee.thisWeek ? '（' + md(fee.thisWeek.start) + '–' + md(fee.thisWeek.end) + '）' : '') + '<br>本月收入 <b>' + fmt(fee.monthIn) + '</b> · 本月支出 <b>' + fmt(fee.monthOut) + '</b></div>' + mini(weekly, 'in', function (w, i) { return md(w.start) + '–' + md(w.end) + (i === 0 ? ' 本周' : ''); }, '') + '</div>');
+      if ((fee.expenseAll || []).length) out.push('<div class="stat"><div class="k"><i class="out"></i>支出去向 · 累计</div><div class="big"><small>共 ' + fee.expenseAll.length + ' 类</small></div>' + mini(fee.expenseAll, 'amount', function (c) { return esc(c.category); }, 'o') + '</div>');
+    } else {
+      out.push('<div class="stat hero empty-state"><div class="k"><i></i>班费</div>第一期公示发布后，这里显示结余与收支汇总。</div>');
+    }
+    if (signups) {
+      var n = signups.length, roles = {}, cnt = 0;
+      signups.forEach(function (p) { (p.roles || []).forEach(function (r) { roles[r] = 1; cnt++; }); });
+      out.push('<div class="stat"><div class="k"><i></i>微岗位认领</div><div class="big">' + n + ' <small>人已认领</small></div><div class="d">覆盖 <b>' + Object.keys(roles).length + '</b> / 20 个岗位，共 <b>' + cnt + '</b> 次认领。<br><a href="微岗位报名.html">看谁在哪个岗 ›</a></div></div>');
+    }
+    $('stats').innerHTML = out.join('');
+  }
+
+  // Drive 缩略图一次并发十几张会随机失败：逐张加载，失败重试 3 次，仍失败就撤掉那页
+  var loadToken = 0, idx = 0, timer = null, track = $('track'), dots = $('dots');
+  function loadPhotos() {
+    var token = ++loadToken, imgs = Array.prototype.slice.call(track.querySelectorAll('img[data-src]'));
+    function tryLoad(src, n) { return new Promise(function (res) { var t = new Image(); t.onload = function () { res(true); }; t.onerror = function () { n > 0 ? setTimeout(function () { tryLoad(src, n - 1).then(res); }, 1200) : res(false); }; t.src = src; }); }
+    (function next(i) {
+      if (token !== loadToken || i >= imgs.length) return;
+      var im = imgs[i], src = im.getAttribute('data-src');
+      tryLoad(src, 3).then(function (ok) {
+        if (token !== loadToken) return;
+        if (ok) { im.src = src; im.removeAttribute('data-src'); } else { var sl = im.closest('.slide'); if (sl) { sl.remove(); syncDots(); $('photos').hidden = !track.children.length; } }
+        next(i + 1);
+      });
+    })(0);
+  }
+  function syncDots() {
+    var n = track.children.length;
+    dots.innerHTML = Array.apply(null, { length: n }).map(function (_, i) { return '<button type="button" aria-label="第 ' + (i + 1) + ' 张" data-i="' + i + '"></button>'; }).join('');
+    if (idx >= n) idx = 0;
+    Array.prototype.forEach.call(dots.children, function (d, j) { d.setAttribute('aria-current', j === idx ? 'true' : 'false'); });
+  }
+  function renderCarousel() {
+    var html = slides(); track.innerHTML = html.join('');
+    $('photos').hidden = !html.length;
+    loadPhotos(); syncDots(); go(Math.min(idx, html.length - 1), true);
+  }
+  function go(i, silent) {
+    var n = track.children.length; if (!n) return;
+    idx = (i + n) % n;
+    var el = track.children[idx];
+    track.scrollTo({ left: el.offsetLeft - track.offsetLeft, behavior: silent ? 'auto' : 'smooth' });
+    Array.prototype.forEach.call(dots.children, function (d, j) { d.setAttribute('aria-current', j === idx ? 'true' : 'false'); });
+  }
+  dots.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { go(+b.dataset.i); restart(); } });
+  track.addEventListener('scroll', function () { var w = track.clientWidth + 12; var i = Math.round(track.scrollLeft / w); if (i !== idx && i >= 0 && i < track.children.length) { idx = i; Array.prototype.forEach.call(dots.children, function (d, j) { d.setAttribute('aria-current', j === idx ? 'true' : 'false'); }); } });
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function restart() { clearInterval(timer); if (reduce) return; timer = setInterval(function () { if (document.hidden) return; go(idx + 1); }, 6000); }
+  ['mouseenter', 'touchstart', 'focusin'].forEach(function (ev) { track.addEventListener(ev, function () { clearInterval(timer); }, { passive: true }); });
+  ['mouseleave', 'touchend', 'focusout'].forEach(function (ev) { track.addEventListener(ev, restart, { passive: true }); });
+  renderCarousel(); renderStats(); restart();
+
+  if (API) QX.ready().then(function () {
+    QX.api('summary').then(function (r) { fee = r && r.ok ? r.summary : null; renderStats(); }).catch(function () {});
+    QX.api('signups').then(function (r) { signups = r && r.ok ? r.people : null; renderStats(); }).catch(function () {});
+    QX.api('photos').then(function (r) { photos = r && r.ok ? (r.photos || []) : []; renderCarousel(); }).catch(function () {});
+  });
+
+  // 导航高亮
+  var links = document.querySelectorAll('nav.top a[data-nav]');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) links.forEach(function (a) { a.classList.toggle('on', a.dataset.nav === e.target.id); }); }); }, { rootMargin: '-40% 0px -55% 0px' });
+    ['photos', 'show', 'projects', 'staff'].forEach(function (id) { io.observe($(id)); });
+  }
+})();
+</script>
+</body>
+</html>

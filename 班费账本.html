@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>栖心一班班费账本</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
+<style>
+/* Layout: phone-first single column; sticky header + tabs; floating 记一笔 button; dialog sheet for entry. */
+:root{
+  --bg:#f3f4f7; --card:#ffffff; --ink:#1b2130; --muted:#6a7284; --line:#dde1e8; --soft:#eef0f4;
+  --accent:#36479f; --accent-ink:#ffffff;
+  --in:#1d7a4e; --in-bg:#e3f3ea; --out:#b6412b; --out-bg:#f9e8e3; --warn:#8a6a1a; --warn-bg:#faf1d8;
+  --display:'Noto Serif SC','Songti SC','SimSun',serif;
+  --body:system-ui,-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#13161d; --card:#1c2029; --ink:#e7e9ef; --muted:#9aa2b3; --line:#2d3340; --soft:#242933;
+  --accent:#95a3f2; --accent-ink:#10142a;
+  --in:#62cf93; --in-bg:#163322; --out:#f29078; --out-bg:#3a1f18; --warn:#e2c15c; --warn-bg:#3a3116;
+  color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#13161d; --card:#1c2029; --ink:#e7e9ef; --muted:#9aa2b3; --line:#2d3340; --soft:#242933;
+  --accent:#95a3f2; --accent-ink:#10142a;
+  --in:#62cf93; --in-bg:#163322; --out:#f29078; --out-bg:#3a1f18; --warn:#e2c15c; --warn-bg:#3a3116;
+  color-scheme:dark }
+
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 96px}
+img{max-width:100%} [hidden]{display:none!important}
+.wrap{max-width:760px;margin:0 auto}
+header.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 0 8px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:700;font-size:22px;margin:0;letter-spacing:.02em;text-wrap:balance}
+h1 small{font-family:var(--body);font-weight:500;font-size:12px;color:var(--muted);margin-left:8px;letter-spacing:.08em}
+.status{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.status.on i{background:var(--in)} .status.ro i{background:var(--warn)}
+.status a{color:var(--muted);margin-left:4px}
+.tabs{display:flex;gap:4px;margin-top:10px}
+.tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-size:14px;padding:8px 4px;border-radius:8px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+main{padding-top:14px;display:grid;gap:14px}
+section.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
+h2 .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+h2 .seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:3px 10px;cursor:pointer;letter-spacing:0;text-transform:none}
+h2 .seg button[aria-pressed="true"]{background:var(--soft);color:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{padding:12px 12px 10px;border-radius:10px;background:var(--soft);min-width:0}
+.tile .k{font-size:12px;color:var(--muted)}
+.tile .v{font-family:var(--display);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2;margin-top:2px;overflow-wrap:anywhere}
+.tile.in .v{color:var(--in)} .tile.out .v{color:var(--out)}
+.tile .sub{font-size:11px;color:var(--muted);margin-top:4px}
+@media (max-width:480px){ .tiles{grid-template-columns:1fr 1fr} .tiles .tile:first-child{grid-column:1/-1} }
+.bars{display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:minmax(72px,30%) 1fr auto;align-items:center;gap:8px;font-size:13px}
+.bar .lbl{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.bar .track{height:10px;background:var(--soft);border-radius:5px;overflow:hidden;position:relative}
+.bar .track b{position:absolute;left:0;top:0;bottom:0;background:var(--out);border-radius:5px;min-width:2px}
+.bar.in .track b{background:var(--in)}
+.bar .amt{font-variant-numeric:tabular-nums;color:var(--muted);min-width:0;white-space:nowrap}
+.bar.neg .amt{color:var(--out);font-weight:600}
+.dual{display:grid;gap:4px}
+.dual .row{display:grid;grid-template-columns:88px 1fr;gap:8px;align-items:center;font-size:12px}
+.dual .row .lbl{color:var(--muted);white-space:nowrap}
+.dual .pair{display:grid;gap:2px}
+.dual .pair div{height:7px;border-radius:4px;background:var(--in);min-width:1px;position:relative}
+.dual .pair div.o{background:var(--out)}
+.dual .pair div span{position:absolute;left:calc(100% + 6px);top:-5px;font-size:11px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:7px;border-radius:3px;background:var(--in);margin-right:4px}
+.legend i.o{background:var(--out)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500;font-size:12px}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tscroll{overflow-x:auto}
+.empty{color:var(--muted);font-size:14px;padding:18px 4px;text-align:center}
+.empty b{display:block;color:var(--ink);margin-bottom:4px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.filters select,.filters input{flex:1;min-width:110px}
+.mgroup{margin-top:6px}
+.mhead{display:flex;justify-content:space-between;align-items:baseline;padding:10px 2px 6px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line)}
+.mhead b{color:var(--ink);font-weight:600}
+.mhead .t{font-variant-numeric:tabular-nums;display:flex;gap:10px}
+.mhead .t .i{color:var(--in)} .mhead .t .o{color:var(--out)}
+.entry{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line);cursor:pointer;min-width:0}
+.entry:hover{background:var(--soft)}
+.entry .d{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.2}
+.entry .m{min-width:0}
+.entry .c{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entry .c .p{font-weight:500;color:var(--muted)}
+.entry .n{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entry .a{font-variant-numeric:tabular-nums;font-weight:600;font-size:15px;white-space:nowrap}
+.entry.in .a{color:var(--in)} .entry.out .a{color:var(--out)}
+.chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--soft);color:var(--muted);margin-left:6px;vertical-align:middle}
+.btn{font:inherit;font-size:14px;padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn:hover{background:var(--soft)} .btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--out);border-color:var(--out)}
+.btn:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fab{position:fixed;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:6;
+  background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:14px 22px;font:inherit;font-size:16px;font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,.22);cursor:pointer}
+.fab:disabled{opacity:.4}
+pre.pub{white-space:pre-wrap;font-family:var(--body);font-size:14px;background:var(--soft);border-radius:10px;padding:12px 14px;margin:0 0 10px;line-height:1.6}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.gate{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:16px;font-size:14px;line-height:1.6}
+.login{display:grid;gap:10px;max-width:360px}
+.login input{font-size:18px;letter-spacing:.1em}
+
+dialog{border:0;border-radius:16px;padding:0;background:var(--card);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 40px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(10,12,20,.5)}
+.dhead{display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;border-bottom:1px solid var(--line)}
+.dhead h3{margin:0;font-family:var(--display);font-size:18px}
+form{padding:14px 18px 18px;display:grid;gap:12px}
+.kind{display:grid;grid-template-columns:1fr 1fr;gap:6px;border:1px solid var(--line);border-radius:10px;padding:4px}
+.kind label{text-align:center;padding:8px;border-radius:7px;cursor:pointer;font-weight:600;color:var(--muted)}
+.kind input{position:absolute;opacity:0;pointer-events:none}
+.kind label:has(input:checked){background:var(--soft);color:var(--ink)}
+.kind label.in:has(input:checked){background:var(--in-bg);color:var(--in)}
+.kind label.out:has(input:checked){background:var(--out-bg);color:var(--out)}
+.f{display:grid;gap:4px}
+.f label{font-size:12px;color:var(--muted)}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){ .f2{grid-template-columns:1fr} }
+input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);width:100%;min-width:0}
+.amount-wrap{position:relative}
+.amount-wrap span{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.amount-wrap input{padding-left:24px;font-variant-numeric:tabular-nums}
+.radios{display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
+.radios label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.radios input{width:auto}
+.receipt{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.receipt img{max-height:72px;max-width:120px;border-radius:6px;border:1px solid var(--line)}
+.receipt .file{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.receipt a{color:var(--accent)}
+.dfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:4px}
+.dfoot .right{display:flex;gap:8px;margin-left:auto}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;z-index:20;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){ .toast{transition:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div class="brand">
+    <h1>栖心一班 · 班费账本<small>内部 · 记账义工</small></h1>
+    <span class="status" id="status"><i></i><span id="statusText">连接中…</span><a href="#" id="logout" hidden>退出</a></span>
+  </div>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-view="overview" id="tabOverview">总览</button>
+    <button role="tab" aria-selected="false" data-view="ledger" id="tabLedger">流水</button>
+    <button role="tab" aria-selected="false" data-view="publish" id="tabPublish">公示</button>
+  </div>
+</header>
+
+<main>
+  <div class="gate" id="gate" hidden></div>
+  <section class="card" id="loginCard" hidden>
+    <h2>记账口令</h2>
+    <div class="login">
+      <input type="password" id="key" placeholder="输入记账口令" autocomplete="current-password">
+      <button class="btn primary" id="loginBtn">进入账本</button>
+      <div class="hint">口令由班委发给记账义工。本机会记住，换设备需重新输入。</div>
+    </div>
+  </section>
+
+  <div id="views" hidden>
+  <div id="view-overview">
+    <section class="card">
+      <h2>当前结余</h2>
+      <div class="tiles">
+        <div class="tile"><div class="k">账上结余</div><div class="v" id="tBal">$0.00</div><div class="sub" id="tBalSub">随喜 $0.00 · 专项 $0.00</div></div>
+        <div class="tile in"><div class="k">本月收入</div><div class="v" id="tMIn">$0.00</div><div class="sub" id="tMInSub">本周 $0.00</div></div>
+        <div class="tile out"><div class="k">本月支出</div><div class="v" id="tMOut">$0.00</div><div class="sub" id="tMOutSub">累计 $0.00</div></div>
+      </div>
+    </section>
+    <section class="card" style="margin-top:14px">
+      <h2>专项供养余额 <span class="chip">限定用途</span></h2>
+      <div id="restricted" class="bars"></div>
+    </section>
+    <section class="card" style="margin-top:14px">
+      <h2>支出分类
+        <span class="seg"><button type="button" aria-pressed="true" id="segMonth">本月</button><button type="button" aria-pressed="false" id="segAll">累计</button></span>
+      </h2>
+      <div id="expCats" class="bars"></div>
+    </section>
+    <section class="card" style="margin-top:14px">
+      <h2>近 8 周 收入 / 支出</h2>
+      <div id="weekly" class="dual"></div>
+      <div class="legend"><span><i></i>收入</span><span><i class="o"></i>支出</span></div>
+    </section>
+    <section class="card" style="margin-top:14px">
+      <h2>按月汇总</h2>
+      <div class="tscroll"><table id="monthly"><thead><tr><th>月份</th><th class="r">收入</th><th class="r">支出</th><th class="r">净额</th><th class="r">笔数</th></tr></thead><tbody></tbody></table></div>
+    </section>
+  </div>
+
+  <div id="view-ledger" hidden>
+    <section class="card">
+      <div class="filters">
+        <select id="fMonth"><option value="">全部月份</option></select>
+        <select id="fKind"><option value="">收支</option><option value="in">只看收入</option><option value="out">只看支出</option></select>
+        <input id="fText" type="search" placeholder="搜类别 / 用途 / 人 / 备注">
+      </div>
+      <div id="ledger"></div>
+    </section>
+  </div>
+
+  <div id="view-publish" hidden>
+    <section class="card">
+      <h2>公示 <span id="pubInfo" style="font-weight:400;letter-spacing:0;text-transform:none">尚未发布</span></h2>
+      <pre class="pub" id="pubText"></pre>
+      <div class="actions">
+        <button class="btn primary" id="publishBtn">发布到公示页</button>
+        <button class="btn" id="copyText">复制公示文本</button>
+      </div>
+      <div class="hint">「发布到公示页」把上面的汇总数字（不含明细和凭证）推到公开的 班费公示 页，全班打开即见。「复制公示文本」直接贴到班级群。建议每周发布一次。</div>
+    </section>
+  </div>
+  </div>
+</main>
+</div>
+
+<button class="fab" id="addBtn" hidden>＋ 记一笔</button>
+<div class="toast" id="toast" role="status"></div>
+
+<dialog id="dlg">
+  <div class="dhead"><h3 id="dlgTitle">记一笔</h3><button type="button" class="btn" id="closeBtn">关闭</button></div>
+  <form id="form" novalidate>
+    <div class="kind">
+      <label class="in"><input type="radio" name="kind" value="in" id="kindIn" checked>收入</label>
+      <label class="out"><input type="radio" name="kind" value="out" id="kindOut">支出</label>
+    </div>
+    <div class="f2">
+      <div class="f"><label for="date">日期</label><input type="date" id="date" required></div>
+      <div class="f"><label for="amount">金额（美元）</label><div class="amount-wrap"><span>$</span><input type="number" id="amount" inputmode="decimal" step="0.01" min="0.01" placeholder="0.00" required></div></div>
+    </div>
+    <div id="secIn">
+      <div class="f"><label>供养类别</label>
+        <div class="radios">
+          <label><input type="radio" name="incat" value="随喜供养" id="incatFree" checked>随喜供养（非限定）</label>
+          <label><input type="radio" name="incat" value="专项供养" id="incatRestricted">专项供养（指定用途）</label>
+        </div>
+      </div>
+      <div class="f" id="fPurposeIn" hidden style="margin-top:10px"><label for="purposeIn">指定用途（选已有的，或直接输入新用途）</label><input id="purposeIn" list="purposeList" placeholder="如：法师供养 / 禅修营 / 结业礼物"></div>
+    </div>
+    <div id="secOut" hidden>
+      <div class="f2">
+        <div class="f"><label for="category">支出类别（可直接输入新类别）</label><input id="category" list="catList" placeholder="如：餐饮 / 物料 / 场地"></div>
+        <div class="f"><label for="purposeOut">动用专项（可不填）</label><select id="purposeOut"><option value="">不动用专项 · 从随喜支出</option></select></div>
+      </div>
+    </div>
+    <div class="f2">
+      <div class="f"><label for="who" id="whoLabel">供养人 / 经手人</label><input id="who" list="whoList" placeholder="法名或姓名"></div>
+      <div class="f"><label for="note">备注</label><input id="note" placeholder="用途说明、事由"></div>
+    </div>
+    <div class="f"><label for="file">凭证（照片或 PDF）</label>
+      <div class="receipt" id="receiptBox">
+        <input type="file" id="file" accept="image/*,application/pdf" style="width:auto;max-width:100%">
+      </div>
+    </div>
+    <datalist id="purposeList"></datalist><datalist id="catList"></datalist><datalist id="whoList"></datalist>
+    <div class="dfoot">
+      <button type="button" class="btn danger" id="delBtn" hidden>删除</button>
+      <div class="right"><button type="button" class="btn" id="cancelBtn">取消</button><button type="submit" class="btn primary" id="saveBtn">保存</button></div>
+    </div>
+  </form>
+</dialog>
+
+<script src="banfei.config.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const API = (window.BANFEI_API || '').trim();
+const DEFAULT_EXP = ['餐饮', '物料', '场地', '供养法师', '打印', '交通', '其他'];
+const OK_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'];
+let key = '', entries = [], editing = null, pendingFile = null, dropReceipt = false, expRange = 'month', lastPub = null;
+
+const fmt = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pad = n => String(n).padStart(2, '0');
+const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const today = () => iso(new Date());
+const md = s => { const [, m, d] = s.split('-'); return +m + '/' + +d; };
+const ym = s => { const [y, m] = s.split('-'); return y + '年' + +m + '月'; };
+function mondayOf(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; }
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2800); }
+function setStatus(cls, text) { $('status').className = 'status ' + cls; $('statusText').textContent = text; }
+
+// ---------- API ----------
+async function apiPost(body) {
+  const r = await fetch(API, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }); return r.json();
+}
+function fail(r) { const e = new Error(r?.error || '请求失败'); e.auth = /口令/.test(r?.error || ''); return e; }
+
+// ---------- derived data ----------
+function compute() {
+  const amt = e => +e.amount || 0;
+  const sum = (list, k) => list.reduce((a, e) => a + (e.kind === k ? amt(e) : 0), 0);
+  const totalIn = sum(entries, 'in'), totalOut = sum(entries, 'out');
+  const pm = {};
+  entries.forEach(e => { if (e.purpose) { const p = pm[e.purpose] || (pm[e.purpose] = { purpose: e.purpose, in: 0, out: 0 }); p[e.kind] += amt(e); } });
+  const restricted = Object.values(pm).map(p => ({ ...p, balance: +(p.in - p.out).toFixed(2) })).sort((a, b) => b.balance - a.balance);
+  const restrictedBal = restricted.reduce((a, p) => a + p.balance, 0);
+  const now = new Date(), thisMonth = today().slice(0, 7), wk0 = mondayOf(now);
+  const mm = {};
+  entries.forEach(e => { const k = e.date.slice(0, 7); const m = mm[k] || (mm[k] = { month: k, in: 0, out: 0, n: 0 }); m[e.kind] += amt(e); m.n++; });
+  const monthly = Object.values(mm).sort((a, b) => a.month < b.month ? 1 : -1);
+  const weekly = [];
+  for (let i = 0; i < 8; i++) {
+    const s = new Date(wk0); s.setDate(s.getDate() - 7 * i); const e = new Date(s); e.setDate(e.getDate() + 6);
+    const si = iso(s), ei = iso(e), w = { start: si, end: ei, in: 0, out: 0 };
+    entries.forEach(x => { if (x.date >= si && x.date <= ei) w[x.kind] += amt(x); });
+    weekly.push(w);
+  }
+  const byCat = list => { const c = {}; list.forEach(e => { if (e.kind !== 'out') return; const k = e.category || '未分类'; c[k] = (c[k] || 0) + amt(e); }); return Object.entries(c).map(([category, amount]) => ({ category, amount: +amount.toFixed(2) })).sort((a, b) => b.amount - a.amount); };
+  const mRow = monthly.find(m => m.month === thisMonth) || { in: 0, out: 0 };
+  return {
+    asOf: today(), currency: 'USD', count: entries.length,
+    balance: +(totalIn - totalOut).toFixed(2), totalIn: +totalIn.toFixed(2), totalOut: +totalOut.toFixed(2),
+    unrestricted: +(totalIn - totalOut - restrictedBal).toFixed(2), restricted,
+    thisMonth, monthIn: +mRow.in.toFixed(2), monthOut: +mRow.out.toFixed(2),
+    thisWeek: weekly[0], weekly, monthly: monthly.slice(0, 12).map(m => ({ ...m, in: +m.in.toFixed(2), out: +m.out.toFixed(2) })),
+    expenseMonth: byCat(entries.filter(e => e.date.startsWith(thisMonth))), expenseAll: byCat(entries),
+  };
+}
+const pubPayload = s => ({ class: '栖心一班', asOf: s.asOf, currency: s.currency, balance: s.balance, unrestricted: s.unrestricted, restricted: s.restricted.map(p => ({ purpose: p.purpose, balance: p.balance })), thisWeek: { start: s.thisWeek.start, end: s.thisWeek.end, in: s.thisWeek.in }, monthIn: s.monthIn, monthOut: s.monthOut, weekly: s.weekly.map(w => ({ start: w.start, end: w.end, in: w.in })), monthly: s.monthly.slice(0, 6).map(m => ({ month: m.month, in: m.in })), expenseMonth: s.expenseMonth, expenseAll: s.expenseAll });
+const purposes = () => [...new Set(entries.map(e => e.purpose).filter(Boolean))].sort();
+const expCats = () => [...new Set([...entries.filter(e => e.kind === 'out').map(e => e.category).filter(Boolean), ...DEFAULT_EXP])];
+const whos = () => [...new Set(entries.map(e => e.who).filter(Boolean))].sort();
+
+// ---------- render ----------
+function render() {
+  const s = compute();
+  $('tBal').textContent = fmt(s.balance);
+  $('tBalSub').textContent = '随喜 ' + fmt(s.unrestricted) + ' · 专项 ' + fmt(s.balance - s.unrestricted);
+  $('tMIn').textContent = fmt(s.monthIn); $('tMInSub').textContent = '本周 ' + fmt(s.thisWeek.in) + ' · 累计 ' + fmt(s.totalIn);
+  $('tMOut').textContent = fmt(s.monthOut); $('tMOutSub').textContent = '本周 ' + fmt(s.thisWeek.out) + ' · 累计 ' + fmt(s.totalOut);
+  const rmax = Math.max(1, ...s.restricted.map(p => Math.abs(p.balance)));
+  $('restricted').innerHTML = s.restricted.length ? s.restricted.map(p => `<div class="bar in ${p.balance < 0 ? 'neg' : ''}"><span class="lbl" title="${esc(p.purpose)}">${esc(p.purpose)}</span><span class="track"><b style="width:${Math.abs(p.balance) / rmax * 100}%"></b></span><span class="amt">${fmt(p.balance)}<small style="color:var(--muted)"> / 收 ${fmt(p.in)}</small></span></div>`).join('')
+    : '<div class="empty">还没有专项供养。记收入时选「专项供养」并填用途，这里就会按用途分别显示余额。</div>';
+  const cats = expRange === 'month' ? s.expenseMonth : s.expenseAll;
+  const cmax = Math.max(1, ...cats.map(c => c.amount));
+  $('expCats').innerHTML = cats.length ? cats.map(c => `<div class="bar"><span class="lbl" title="${esc(c.category)}">${esc(c.category)}</span><span class="track"><b style="width:${c.amount / cmax * 100}%"></b></span><span class="amt">${fmt(c.amount)}</span></div>`).join('')
+    : `<div class="empty">${expRange === 'month' ? '本月还没有支出。' : '还没有支出记录。'}</div>`;
+  const wmax = Math.max(1, ...s.weekly.flatMap(w => [w.in, w.out]));
+  $('weekly').innerHTML = [...s.weekly].reverse().map((w, i, arr) => `<div class="row"><span class="lbl">${md(w.start)}–${md(w.end)}${i === arr.length - 1 ? ' 本周' : ''}</span><span class="pair"><div style="width:${w.in / wmax * 78}%"><span>${w.in ? fmt(w.in) : ''}</span></div><div class="o" style="width:${w.out / wmax * 78}%"><span>${w.out ? fmt(w.out) : ''}</span></div></span></div>`).join('');
+  $('monthly').querySelector('tbody').innerHTML = s.monthly.length ? s.monthly.map(m => `<tr><td>${ym(m.month)}</td><td class="r" style="color:var(--in)">${fmt(m.in)}</td><td class="r" style="color:var(--out)">${fmt(m.out)}</td><td class="r">${fmt(m.in - m.out)}</td><td class="r">${m.n}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="empty">还没有记录。点右下角「记一笔」录入第一笔。</td></tr>';
+  const months = [...new Set(entries.map(e => e.date.slice(0, 7)))].sort().reverse();
+  const fm = $('fMonth'), cur = fm.value;
+  fm.innerHTML = '<option value="">全部月份</option>' + months.map(m => `<option value="${m}">${ym(m)}</option>`).join('');
+  if (months.includes(cur)) fm.value = cur;
+  renderLedger();
+  $('pubText').textContent = pubText(s);
+  $('pubInfo').textContent = lastPub?.publishedAt ? '上次发布 ' + new Date(lastPub.publishedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '尚未发布';
+  $('purposeList').innerHTML = purposes().map(p => `<option value="${esc(p)}">`).join('');
+  $('catList').innerHTML = expCats().map(p => `<option value="${esc(p)}">`).join('');
+  $('whoList').innerHTML = whos().map(p => `<option value="${esc(p)}">`).join('');
+}
+
+function renderLedger() {
+  const m = $('fMonth').value, k = $('fKind').value, q = $('fText').value.trim().toLowerCase();
+  let list = entries.filter(e => (!m || e.date.startsWith(m)) && (!k || e.kind === k) && (!q || [e.category, e.purpose, e.who, e.note].join(' ').toLowerCase().includes(q)));
+  list = [...list].sort((a, b) => a.date === b.date ? String(b.created_at || '').localeCompare(String(a.created_at || '')) : (a.date < b.date ? 1 : -1));
+  if (!list.length) { $('ledger').innerHTML = `<div class="empty"><b>${entries.length ? '没有符合条件的记录' : '还没有记录'}</b>${entries.length ? '换个筛选条件试试。' : '点右下角「记一笔」录入第一笔。'}</div>`; return; }
+  const groups = {};
+  list.forEach(e => (groups[e.date.slice(0, 7)] ||= []).push(e));
+  $('ledger').innerHTML = Object.entries(groups).map(([mon, es]) => {
+    const i = es.reduce((a, e) => a + (e.kind === 'in' ? +e.amount : 0), 0), o = es.reduce((a, e) => a + (e.kind === 'out' ? +e.amount : 0), 0);
+    return `<div class="mgroup"><div class="mhead"><b>${ym(mon)}</b><span class="t"><span class="i">收 ${fmt(i)}</span><span class="o">支 ${fmt(o)}</span></span></div>` +
+      es.map(e => `<div class="entry ${e.kind}" data-id="${esc(e.id)}" tabindex="0" role="button">
+        <div class="d">${md(e.date)}<br><small>${e.date.slice(0, 4)}</small></div>
+        <div class="m"><div class="c">${esc(e.kind === 'in' ? e.category : (e.category || '未分类'))}${e.purpose ? `<span class="p"> · ${esc(e.purpose)}</span>` : ''}${e.receipt ? '<span class="chip">凭证</span>' : ''}</div><div class="n">${esc([e.who, e.note].filter(Boolean).join(' · ') || '—')}</div></div>
+        <div class="a">${e.kind === 'in' ? '+' : '−'}${fmt(+e.amount)}</div>
+      </div>`).join('') + '</div>';
+  }).join('');
+}
+
+function pubText(s) {
+  const L = [];
+  L.push(`栖心一班 班费公示（截至 ${s.asOf}）`);
+  L.push(`当前结余：${fmt(s.balance)}`);
+  L.push(`　随喜供养（非限定）：${fmt(s.unrestricted)}`);
+  if (s.restricted.length) L.push(`　专项供养：` + s.restricted.map(p => `${p.purpose} ${fmt(p.balance)}`).join('；'));
+  L.push(`本周收入（${md(s.thisWeek.start)}–${md(s.thisWeek.end)}）：${fmt(s.thisWeek.in)}`);
+  L.push(`本月收入（${ym(s.thisMonth)}）：${fmt(s.monthIn)}`);
+  L.push(`本月支出：${fmt(s.monthOut)}` + (s.expenseMonth.length ? '（' + s.expenseMonth.map(c => `${c.category} ${fmt(c.amount)}`).join('、') + '）' : ''));
+  if (s.expenseAll.length) L.push(`累计支出分类：` + s.expenseAll.map(c => `${c.category} ${fmt(c.amount)}`).join('、'));
+  L.push(`累计收入 ${fmt(s.totalIn)} · 累计支出 ${fmt(s.totalOut)} · 共 ${s.count} 笔`);
+  return L.join('\n');
+}
+
+// ---------- tabs / filters / copy ----------
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  ['overview', 'ledger', 'publish'].forEach(v => $('view-' + v).hidden = v !== b.dataset.view);
+  try { localStorage.setItem('bf-view', b.dataset.view); } catch (_) {}
+}));
+try { const v = localStorage.getItem('bf-view'); if (v) document.querySelector(`.tabs button[data-view="${v}"]`)?.click(); } catch (_) {}
+['fMonth', 'fKind', 'fText'].forEach(id => $(id).addEventListener('input', renderLedger));
+$('segMonth').addEventListener('click', () => { expRange = 'month'; $('segMonth').setAttribute('aria-pressed', 'true'); $('segAll').setAttribute('aria-pressed', 'false'); render(); });
+$('segAll').addEventListener('click', () => { expRange = 'all'; $('segAll').setAttribute('aria-pressed', 'true'); $('segMonth').setAttribute('aria-pressed', 'false'); render(); });
+async function copy(text, label) {
+  try { await navigator.clipboard.writeText(text); toast(label + '已复制'); }
+  catch (_) { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); toast('请按 Ctrl/Cmd+C 复制'); setTimeout(() => ta.remove(), 8000); }
+}
+$('copyText').addEventListener('click', () => copy(pubText(compute()), '公示文本'));
+$('publishBtn').addEventListener('click', async () => {
+  const b = $('publishBtn'); b.disabled = true; b.textContent = '发布中…';
+  try { const r = await apiPost({ action: 'publish', key, summary: pubPayload(compute()) }); if (!r.ok) throw fail(r); lastPub = { publishedAt: new Date().toISOString() }; render(); toast('已发布到公示页'); }
+  catch (e) { toast(e.message); if (e.auth) logout(); }
+  finally { b.disabled = false; b.textContent = '发布到公示页'; }
+});
+
+// ---------- dialog ----------
+const dlg = $('dlg'), form = $('form');
+function syncKind() {
+  const isIn = $('kindIn').checked;
+  $('secIn').hidden = !isIn; $('secOut').hidden = isIn;
+  $('whoLabel').textContent = isIn ? '供养人' : '经手人';
+  $('fPurposeIn').hidden = !$('incatRestricted').checked;
+}
+form.querySelectorAll('input[name=kind],input[name=incat]').forEach(r => r.addEventListener('change', syncKind));
+const driveView = id => 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view';
+const driveThumb = id => 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w240';
+function showReceipt(e) {
+  const box = $('receiptBox'); box.querySelectorAll('.rv').forEach(n => n.remove());
+  const r = e?.receipt; if (!r || dropReceipt) return;
+  const div = document.createElement('div'); div.className = 'rv receipt';
+  const isImg = (r.type || '').startsWith('image/');
+  div.innerHTML = `<a href="${driveView(r.id)}" target="_blank" rel="noopener">${isImg ? `<img src="${driveThumb(r.id)}" alt="凭证" onerror="this.replaceWith(document.createTextNode('查看凭证'))">` : '查看凭证 PDF'}</a><span class="file">${esc(r.name || '')}</span><button type="button" class="btn" id="rmReceipt">移除凭证</button>`;
+  box.appendChild(div);
+  $('rmReceipt').addEventListener('click', () => { dropReceipt = true; div.remove(); });
+}
+function openDialog(e) {
+  editing = e || null; pendingFile = null; dropReceipt = false; form.reset(); $('file').value = '';
+  $('dlgTitle').textContent = e ? '修改记录' : '记一笔';
+  $('delBtn').hidden = !e; $('delBtn').textContent = '删除'; $('delBtn').dataset.arm = '';
+  const po = $('purposeOut'); po.innerHTML = '<option value="">不动用专项 · 从随喜支出</option>' + purposes().map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  if (e) {
+    (e.kind === 'in' ? $('kindIn') : $('kindOut')).checked = true;
+    $('date').value = e.date; $('amount').value = (+e.amount).toFixed(2);
+    if (e.kind === 'in') { (e.category === '专项供养' ? $('incatRestricted') : $('incatFree')).checked = true; $('purposeIn').value = e.purpose || ''; }
+    else { $('category').value = e.category || ''; if (e.purpose && ![...po.options].some(o => o.value === e.purpose)) po.add(new Option(e.purpose, e.purpose)); po.value = e.purpose || ''; }
+    $('who').value = e.who || ''; $('note').value = e.note || '';
+  } else { $('date').value = today(); }
+  syncKind(); showReceipt(e);
+  dlg.showModal();
+}
+$('addBtn').addEventListener('click', () => openDialog(null));
+$('closeBtn').addEventListener('click', () => dlg.close()); $('cancelBtn').addEventListener('click', () => dlg.close());
+$('ledger').addEventListener('click', ev => { const row = ev.target.closest('.entry'); if (!row) return; const e = entries.find(x => x.id === row.dataset.id); if (e) openDialog(e); });
+$('ledger').addEventListener('keydown', ev => { if (ev.key === 'Enter') ev.target.closest('.entry')?.click(); });
+$('file').addEventListener('change', () => { pendingFile = $('file').files[0] || null; if (pendingFile) dropReceipt = false; });
+
+async function shrink(file) {
+  if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+  try {
+    const bmp = await createImageBitmap(file); const max = 1600, sc = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.82)); return blob || file;
+  } catch (_) { return file; }
+}
+const toBase64 = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(blob); });
+
+form.addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const kind = $('kindIn').checked ? 'in' : 'out';
+  const date = $('date').value, amount = Math.round(parseFloat($('amount').value) * 100) / 100;
+  if (!date) { toast('请填日期'); return; }
+  if (!(amount > 0)) { toast('请填金额'); return; }
+  let category, purpose;
+  if (kind === 'in') { category = $('incatRestricted').checked ? '专项供养' : '随喜供养'; purpose = category === '专项供养' ? $('purposeIn').value.trim() : ''; if (category === '专项供养' && !purpose) { toast('专项供养请填指定用途'); return; } }
+  else { category = $('category').value.trim(); purpose = $('purposeOut').value; if (!category) { toast('请填支出类别'); return; } }
+  const btn = $('saveBtn'); btn.disabled = true; btn.textContent = pendingFile ? '上传凭证…' : '保存中…';
+  try {
+    let file = null;
+    if (pendingFile) {
+      const blob = await shrink(pendingFile); const type = blob.type || pendingFile.type;
+      if (!OK_TYPES.includes(type)) throw new Error('凭证请用 JPG / PNG / PDF');
+      if (blob.size > 10 * 1024 * 1024) throw new Error('凭证文件过大（上限 10MB）');
+      file = { name: pendingFile.name, type, data: await toBase64(blob), date };
+    }
+    const entry = { id: editing?.id, kind, date, amount, category, purpose: purpose || '', who: $('who').value.trim(), note: $('note').value.trim() };
+    const r = await apiPost(editing ? { action: 'update', key, entry, file, dropReceipt } : { action: 'add', key, entry, file });
+    if (!r.ok) throw fail(r);
+    dlg.close(); toast(editing ? '已修改' : '已记录 ' + (kind === 'in' ? '收入 ' : '支出 ') + fmt(amount));
+    await load();
+  } catch (e) { toast(e.message || '保存失败，请重试'); if (e.auth) logout(); }
+  finally { btn.disabled = false; btn.textContent = '保存'; }
+});
+
+$('delBtn').addEventListener('click', async () => {
+  const b = $('delBtn');
+  if (!b.dataset.arm) { b.dataset.arm = '1'; b.textContent = '确认删除这条？'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '删除'; }, 4000); return; }
+  if (!editing) return; b.disabled = true;
+  try { const r = await apiPost({ action: 'delete', key, id: editing.id }); if (!r.ok) throw fail(r); dlg.close(); toast('已删除'); await load(); }
+  catch (e) { toast(e.message || '删除失败'); if (e.auth) logout(); } finally { b.disabled = false; }
+});
+
+// ---------- connect ----------
+function logout() { key = ''; try { localStorage.removeItem('bf-key'); } catch (_) {} $('views').hidden = true; $('addBtn').hidden = true; $('logout').hidden = true; $('loginCard').hidden = false; setStatus('ro', '请输入口令'); }
+async function load() {
+  setStatus('ro', '读取中…');
+  const [r, p] = await Promise.all([apiPost({ action: 'list', key }), apiPost({ action: 'summary', key }).catch(() => null)]);
+  if (!r.ok) throw fail(r);
+  entries = (r.entries || []).map(e => ({ ...e, amount: +e.amount }));
+  lastPub = p?.summary || null;
+  render(); setStatus('on', '已连接 · ' + entries.length + ' 笔');
+}
+async function enter(k) {
+  try {
+    key = k; await load();
+    try { localStorage.setItem('bf-key', key); } catch (_) {}
+    $('loginCard').hidden = true; $('views').hidden = false; $('addBtn').hidden = false; $('logout').hidden = false;
+  } catch (e) { logout(); setStatus('ro', e.auth ? '口令不对' : '连接失败'); toast(e.auth ? '口令不对' : ('连接失败：' + e.message)); }
+}
+$('loginBtn').addEventListener('click', () => { const k = $('key').value.trim(); if (k) enter(k); });
+$('key').addEventListener('keydown', ev => { if (ev.key === 'Enter') $('loginBtn').click(); });
+$('logout').addEventListener('click', ev => { ev.preventDefault(); logout(); });
+render();
+if (!API) { setStatus('ro', '未配置后端'); $('gate').hidden = false; $('gate').textContent = '还没有配置后端地址：请按 scripts/banfei/README.md 部署 Apps Script，把 Web App URL 填进 banfei.config.js。'; }
+else { let k = ''; try { k = localStorage.getItem('bf-key') || ''; } catch (_) {} if (k) enter(k); else logout(); }
+</script>
+</body>
+</html>

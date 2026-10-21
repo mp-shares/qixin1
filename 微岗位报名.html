@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>栖心一班微岗位认领</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: one column, summary tiles → tabbed views (按岗位 / 按人员 / 组修时间) → dialog editor. Cool paper + 竹青 accent. */
+:root {
+  --bg: #f3f4f1;
+  --paper: #ffffff;
+  --paper-2: #e9ece6;
+  --fg: #1f2a26;
+  --fg-2: #5a6660;
+  --line: #d3d9d3;
+  --accent: #2f6b5a;
+  --accent-soft: #dcebe4;
+  --accent-ink: #1d4c3f;
+  --warn: #b4552a;
+  --warn-soft: #f6e4da;
+  --focus: #2f6b5a;
+  --display: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --body: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171c1a; --paper: #202724; --paper-2: #2a332f; --fg: #e6ebe8; --fg-2: #9fada6;
+    --line: #37423d; --accent: #7fc0a8; --accent-soft: #24433a; --accent-ink: #bfe3d3;
+    --warn: #e59a73; --warn-soft: #4a3026; --focus: #7fc0a8; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #171c1a; --paper: #202724; --paper-2: #2a332f; --fg: #e6ebe8; --fg-2: #9fada6;
+  --line: #37423d; --accent: #7fc0a8; --accent-soft: #24433a; --accent-ink: #bfe3d3;
+  --warn: #e59a73; --warn-soft: #4a3026; --focus: #7fc0a8; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 28px 56px; padding-inline: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 20px; }
+.eyebrow { font-size: 12px; letter-spacing: .18em; color: var(--accent); font-weight: 500; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4vw, 34px); margin: 4px 0 6px; letter-spacing: .04em; text-wrap: balance; }
+.src { color: var(--fg-2); font-size: 13px; max-width: 60ch; }
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fg-2); padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-2); }
+.status.on .dot { background: var(--accent); }
+.status.ro .dot { background: var(--warn); }
+
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+.tile { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.tile .k { font-size: 12px; color: var(--fg-2); letter-spacing: .06em; }
+.tile .v { font-family: var(--display); font-size: 30px; font-weight: 600; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.tile .v small { font-family: var(--body); font-size: 13px; color: var(--fg-2); font-weight: 400; margin-left: 4px; }
+.tile.warn .v { color: var(--warn); }
+@media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.tabs { display: inline-flex; background: var(--paper-2); border-radius: 8px; padding: 3px; gap: 2px; }
+.tabs button { border: 0; background: transparent; color: var(--fg-2); font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 6px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--paper); color: var(--fg); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 7px; border: 1px solid var(--line); background: var(--paper); color: var(--fg); cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+.btn.danger { color: var(--warn); border-color: var(--warn); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:focus-visible, .tabs button:focus-visible, .chip:focus-visible, input:focus-visible, textarea:focus-visible, label.opt:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+section.view[hidden] { display: none; }
+.cat { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+.cat h2 { font-family: var(--display); font-size: 17px; font-weight: 600; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.cat h2 .sum { font-family: var(--body); font-size: 13px; color: var(--fg-2); font-weight: 400; font-variant-numeric: tabular-nums; }
+.role { display: grid; grid-template-columns: 180px 1fr; gap: 6px 16px; padding: 10px 16px; border-top: 1px solid var(--line); align-items: start; }
+.role:first-of-type { border-top: 0; }
+.role .name { font-weight: 500; display: flex; align-items: baseline; gap: 8px; }
+.role .desc { grid-column: 1 / -1; color: var(--fg-2); font-size: 13px; margin-top: -4px; }
+.count { font-size: 12px; min-width: 22px; text-align: center; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.count.zero { background: var(--warn-soft); color: var(--warn); }
+.people { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.chip { font: inherit; font-size: 13px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper-2); color: var(--fg); cursor: pointer; }
+.chip:hover { border-color: var(--accent); }
+.vacant { font-size: 13px; color: var(--warn); }
+@media (max-width: 560px) { .role { grid-template-columns: 1fr; } }
+
+.tablewrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--fg-2); letter-spacing: .06em; font-weight: 500; background: var(--paper-2); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td .cell-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+td .tag { font-size: 12px; padding: 1px 8px; border-radius: 4px; background: var(--accent-soft); color: var(--accent-ink); white-space: nowrap; }
+td .tag.t { background: var(--paper-2); color: var(--fg-2); }
+td.note { color: var(--fg-2); font-size: 13px; max-width: 32ch; }
+td .link { font: inherit; font-size: 13px; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; }
+
+.empty { padding: 36px 16px; text-align: center; color: var(--fg-2); background: var(--paper); border: 1px dashed var(--line); border-radius: 10px; }
+.empty b { color: var(--fg); display: block; font-family: var(--display); font-size: 18px; margin-bottom: 6px; }
+
+dialog { border: 0; border-radius: 12px; padding: 0; width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 32px); background: var(--paper); color: var(--fg); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+dialog::backdrop { background: rgba(10,20,16,.45); }
+dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 32px); }
+.dhead { padding: 16px 20px 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.dhead h3 { margin: 0; font-family: var(--display); font-size: 18px; }
+.dbody { padding: 16px 20px; overflow-y: auto; display: grid; gap: 16px; }
+.field label.lab, .group > .lab { display: block; font-size: 12px; color: var(--fg-2); letter-spacing: .06em; margin-bottom: 6px; }
+input[type="text"], textarea { font: inherit; width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--fg); }
+textarea { min-height: 64px; resize: vertical; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+label.opt { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 7px; cursor: pointer; background: var(--bg); }
+label.opt:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+label.opt input { margin: 0; accent-color: var(--accent); }
+.group h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.group + .group { border-top: 1px solid var(--line); padding-top: 12px; }
+.dfoot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.dfoot .right { display: flex; gap: 8px; }
+.err { color: var(--warn); font-size: 13px; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">栖心一班 · 班级建设工具包</div>
+      <h1>微岗位认领</h1>
+      <div class="src">岗位清单取自《静心学堂班级手册 2.0》附录一·第一组第 3 项。每人至少认领 1 项，可轮换，可多人协作。</div>
+    </div>
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">连接中…</span></div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile"><div class="k">已报名</div><div class="v" id="tPeople">–<small>人</small></div></div>
+    <div class="tile"><div class="k">已有人认领</div><div class="v" id="tFilled">–<small>/ 20 岗</small></div></div>
+    <div class="tile warn"><div class="k">空缺岗位</div><div class="v" id="tVacant">–<small>岗</small></div></div>
+    <div class="tile"><div class="k">认领总次数</div><div class="v" id="tTotal">–<small>次</small></div></div>
+  </div>
+
+  <div class="bar">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-roles" aria-selected="true" data-view="roles">按岗位</button>
+      <button role="tab" id="tab-people" aria-selected="false" data-view="people">按人员</button>
+      <button role="tab" id="tab-time" aria-selected="false" data-view="time">组修时间</button>
+    </div>
+    <div class="actions">
+      <button class="btn" id="copyBtn">复制统计文本</button>
+      <button class="btn primary" id="addBtn">＋ 添加报名</button>
+    </div>
+  </div>
+
+  <section class="view" id="view-roles"></section>
+  <section class="view" id="view-people" hidden></section>
+  <section class="view" id="view-time" hidden></section>
+
+  <footer>
+    全班可看。点名字可查看该人的报名，修改和添加需要班委口令。数据保存在班级的 Google Sheet，每分钟自动刷新。<br>
+    修学支持 5 岗 · 关怀服务 5 岗 · 传灯活动 5 岗 · 班级共建 5 岗，共 20 个微岗位。
+  </footer>
+</div>
+
+<dialog id="dlg">
+  <form id="form" method="dialog">
+    <div class="dhead"><h3 id="dlgTitle">添加报名</h3><button type="button" class="btn" id="closeBtn">关闭</button></div>
+    <div class="dbody">
+      <div class="field"><label class="lab" for="fName">姓名 / 法名</label><input type="text" id="fName" autocomplete="off" required></div>
+      <div class="group"><div class="lab">方便的组修时间（美东）</div><div class="opts" id="fTimes"></div></div>
+      <div id="fRoles"></div>
+      <div class="field"><label class="lab" for="fOther">其他岗位或说明</label><input type="text" id="fOther" autocomplete="off" placeholder="清单之外想承担的事，可留空"></div>
+      <div class="field"><label class="lab" for="fNote">对承担班委的想法 / 备注</label><textarea id="fNote"></textarea></div>
+      <div class="field"><label class="lab" for="fKey">班委口令（修改报名需要，本机会记住）</label><input type="password" id="fKey" autocomplete="off" placeholder="由班委提供"></div>
+      <div class="err" id="fErr" hidden></div>
+    </div>
+    <div class="dfoot">
+      <div><button type="button" class="btn danger" id="delBtn" hidden>删除此人</button></div>
+      <div class="right"><button type="button" class="btn" id="cancelBtn">取消</button><button type="submit" class="btn primary" id="saveBtn">保存</button></div>
+    </div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="banfei.config.js"></script>
+<script src="gate.js"></script>
+<script>
+const CATS = [
+  { id: 'xx', name: '修学支持类', roles: [
+    ['xx1', '共修提醒员', '共修前一天提醒本组成员'],
+    ['xx2', '资料小助手', '转发当周学习资料或链接'],
+    ['xx3', '计时协助', '共修时协助计时和流程提醒'],
+    ['xx4', '记录员', '记录交流重点、疑问和待跟进事项'],
+    ['xx5', '修学工具协助员', '帮助不熟悉工具的同修完成安装与操作'],
+  ]},
+  { id: 'gh', name: '关怀服务类', roles: [
+    ['gh1', '新同学欢迎员', '入班一周内主动问候'],
+    ['gh2', '庆生协助员', '协助准备祝福和流程'],
+    ['gh3', '缺课提醒员', '缺课当天或次日主动关心'],
+    ['gh4', '场地协助员', '线下共修前后协助布置和整理'],
+    ['gh5', '茶水接待员', '线下活动时协助接待与茶水'],
+  ]},
+  { id: 'cd', name: '传灯活动类', roles: [
+    ['cd1', '活动转发员', '协助转发兴趣小组、禅意活动、读书会等活动信息'],
+    ['cd2', '书友接待员', '活动时陪伴新朋友'],
+    ['cd3', '签到协助员', '活动现场签到和记录'],
+    ['cd4', '拍照记录员', '活动影像和素材记录'],
+    ['cd5', '反馈收集员', '活动后收集一句话反馈'],
+  ]},
+  { id: 'gj', name: '班级共建类', roles: [
+    ['gj1', '物资保管员', '保管常用物资、教材、桌牌'],
+    ['gj2', '班费管理员', '配合慈善班委做收支核对'],
+    ['gj3', '案例收集员', '收集班级问题和经验'],
+    ['gj4', '家庭连接员', '推动每周一素、安心茶室等轻量实践'],
+    ['gj5', '文传协助员', '配合文传班委整理活动记录和班级故事，分享修学心得'],
+  ]},
+];
+const ROLE = {}; CATS.forEach(c => c.roles.forEach(([id, name, desc]) => ROLE[id] = { id, name, desc, cat: c.name }));
+const TIMES = ['周四晚', '周五早', '周五晚'];
+const TOTAL_ROLES = Object.keys(ROLE).length;
+
+const API = (window.BANFEI_API || '').trim();
+let people = [], editingId = null, view = 'roles';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function setStatus(kind, text) { const el = $('status'); el.className = 'status ' + kind; $('statusText').textContent = text; }
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2200); }
+
+function sortedPeople() { return [...people].sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh')); }
+
+function render() {
+  const ps = sortedPeople();
+  const byRole = {}; Object.keys(ROLE).forEach(r => byRole[r] = []);
+  let total = 0;
+  ps.forEach(p => (p.roles || []).forEach(r => { if (byRole[r]) { byRole[r].push(p); total++; } }));
+  const filled = Object.values(byRole).filter(a => a.length).length;
+  $('tPeople').innerHTML = ps.length + '<small>人</small>';
+  $('tFilled').innerHTML = filled + '<small>/ ' + TOTAL_ROLES + ' 岗</small>';
+  $('tVacant').innerHTML = (TOTAL_ROLES - filled) + '<small>岗</small>';
+  $('tTotal').innerHTML = total + '<small>次</small>';
+
+  // 按岗位
+  $('view-roles').innerHTML = CATS.map(c => {
+    const catFilled = c.roles.filter(([id]) => byRole[id].length).length;
+    return `<div class="cat"><h2><span>${c.name}</span><span class="sum">${catFilled} / ${c.roles.length} 岗有人 · ${c.roles.reduce((n, [id]) => n + byRole[id].length, 0)} 次认领</span></h2>` +
+      c.roles.map(([id, name, desc]) => {
+        const list = byRole[id];
+        return `<div class="role"><div class="name"><span>${name}</span><span class="count ${list.length ? '' : 'zero'}">${list.length}</span></div>` +
+          `<div class="people">${list.length ? list.map(p => chip(p)).join('') : '<span class="vacant">空缺</span>'}</div>` +
+          `<div class="desc">${desc}</div></div>`;
+      }).join('') + '</div>';
+  }).join('');
+
+  // 按人员
+  if (!ps.length) {
+    $('view-people').innerHTML = `<div class="empty"><b>还没有报名记录</b>点右上角「添加报名」录入第一位同学，或等待数据加载。</div>`;
+  } else {
+    $('view-people').innerHTML = `<div class="tablewrap"><table><thead><tr><th>姓名</th><th>组修时间</th><th>认领岗位</th><th>其他 / 备注</th><th></th></tr></thead><tbody>` +
+      ps.map(p => `<tr><td><b>${esc(p.name)}</b></td>` +
+        `<td><div class="cell-chips">${(p.times || []).map(t => `<span class="tag t">${esc(t)}</span>`).join('') || '<span class="vacant">未填</span>'}</div></td>` +
+        `<td><div class="cell-chips">${(p.roles || []).map(r => ROLE[r] ? `<span class="tag">${ROLE[r].name}</span>` : '').join('')}${p.other ? `<span class="tag t">其他：${esc(p.other)}</span>` : ''}${!(p.roles || []).length && !p.other ? '<span class="vacant">尚未认领</span>' : ''}</div></td>` +
+        `<td class="note">${esc(p.note)}</td>` +
+        `<td><button class="link" data-edit="${esc(p.id)}">编辑</button></td></tr>`).join('') +
+      `</tbody></table></div>`;
+  }
+
+  // 组修时间
+  const byTime = {}; TIMES.forEach(t => byTime[t] = []);
+  const otherTimes = [];
+  ps.forEach(p => (p.times || []).forEach(t => { if (byTime[t]) byTime[t].push(p); else otherTimes.push({ t, p }); }));
+  $('view-time').innerHTML = `<div class="cat"><h2><span>方便的组修时间（美东）</span><span class="sum">可多选，一人可出现在多档</span></h2>` +
+    TIMES.map(t => `<div class="role"><div class="name"><span>${t}</span><span class="count ${byTime[t].length ? '' : 'zero'}">${byTime[t].length}</span></div><div class="people">${byTime[t].length ? byTime[t].map(p => chip(p)).join('') : '<span class="vacant">无人</span>'}</div></div>`).join('') +
+    (otherTimes.length ? `<div class="role"><div class="name"><span>其他</span></div><div class="people">${otherTimes.map(({ t, p }) => chip(p, esc(p.name) + ' · ' + esc(t))).join('')}</div></div>` : '') +
+    `</div>`;
+}
+function chip(p, label) { return `<button class="chip" data-edit="${esc(p.id)}">${label || esc(p.name)}</button>`; }
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-edit]');
+  if (b) openEditor(b.dataset.edit);
+});
+
+// Tabs
+document.querySelectorAll('.tabs button').forEach(btn => btn.addEventListener('click', () => {
+  view = btn.dataset.view;
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b === btn));
+  ['roles', 'people', 'time'].forEach(v => $('view-' + v).hidden = v !== view);
+  try { localStorage.setItem('wgw-view', view); } catch (_) {}
+}));
+try { const v = localStorage.getItem('wgw-view'); if (v) document.querySelector(`.tabs button[data-view="${v}"]`)?.click(); } catch (_) {}
+
+// Editor
+$('fTimes').innerHTML = TIMES.map(t => `<label class="opt"><input type="checkbox" name="time" value="${t}">${t}</label>`).join('');
+$('fRoles').innerHTML = CATS.map(c => `<div class="group"><h4>${c.name}</h4><div class="opts">${c.roles.map(([id, name]) => `<label class="opt" title="${ROLE[id].desc}"><input type="checkbox" name="role" value="${id}">${name}</label>`).join('')}</div></div>`).join('');
+
+function openEditor(id) {
+  editingId = id || null;
+  const p = id ? people.find(x => x.id === id) : null;
+  $('dlgTitle').textContent = p ? '修改报名 · ' + p.name : '添加报名';
+  $('fName').value = p ? p.name : '';
+  $('fOther').value = p ? (p.other || '') : '';
+  $('fNote').value = p ? (p.note || '') : '';
+  document.querySelectorAll('#fTimes input').forEach(i => i.checked = !!(p && (p.times || []).includes(i.value)));
+  document.querySelectorAll('#fRoles input').forEach(i => i.checked = !!(p && (p.roles || []).includes(i.value)));
+  $('delBtn').hidden = !p; $('delBtn').textContent = '删除此人'; $('delBtn').dataset.armed = '';
+  $('fErr').hidden = true;
+  try { $('fKey').value = localStorage.getItem('wgw-key') || ''; } catch (_) {}
+  const ro = !API;
+  $('form').querySelectorAll('input, textarea').forEach(i => i.disabled = ro);
+  $('saveBtn').disabled = ro; $('delBtn').disabled = ro;
+  if (ro) { $('fErr').textContent = '还没有配置后端，当前只能查看。'; $('fErr').hidden = false; }
+  $('dlg').showModal();
+  if (!ro) $('fName').focus();
+}
+$('addBtn').addEventListener('click', () => openEditor(null));
+$('closeBtn').addEventListener('click', () => $('dlg').close());
+$('cancelBtn').addEventListener('click', () => $('dlg').close());
+
+function readForm() {
+  return {
+    name: $('fName').value.trim(),
+    times: [...document.querySelectorAll('#fTimes input:checked')].map(i => i.value),
+    roles: [...document.querySelectorAll('#fRoles input:checked')].map(i => i.value),
+    other: $('fOther').value.trim(),
+    note: $('fNote').value.trim(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+let saving = false;
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (saving || !API) return;
+  const data = readForm();
+  if (!data.name) { $('fErr').textContent = '请填写姓名。'; $('fErr').hidden = false; return; }
+  const key = $('fKey').value.trim();
+  if (!key) { $('fErr').textContent = '请输入班委口令。'; $('fErr').hidden = false; return; }
+  const dup = people.find(p => p.name === data.name && p.id !== editingId);
+  if (dup) { $('fErr').textContent = '已有同名记录，请直接点那条修改。'; $('fErr').hidden = false; return; }
+  saving = true; $('saveBtn').disabled = true;
+  try {
+    const r = await apiPost({ action: 'signup_set', key, person: { id: editingId || '', ...data } });
+    if (!r.ok) throw new Error(r.error || '保存失败，请稍后再试。');
+    try { localStorage.setItem('wgw-key', key); } catch (_) {}
+    $('dlg').close(); toast('已保存'); await load();
+  } catch (err) {
+    $('fErr').textContent = err?.message || '保存失败，请稍后再试。';
+    $('fErr').hidden = false;
+  } finally { saving = false; $('saveBtn').disabled = false; }
+});
+$('delBtn').addEventListener('click', async () => {
+  const b = $('delBtn');
+  if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = '再点一次确认删除'; return; }
+  if (!API || !editingId) return;
+  b.disabled = true;
+  const key = $('fKey').value.trim();
+  if (!key) { $('fErr').textContent = '请输入班委口令。'; $('fErr').hidden = false; b.disabled = false; return; }
+  try { const r = await apiPost({ action: 'signup_delete', key, id: editingId }); if (!r.ok) throw new Error(r.error); try { localStorage.setItem('wgw-key', key); } catch (_) {} $('dlg').close(); toast('已删除'); await load(); }
+  catch (err) { $('fErr').textContent = '删除失败：' + (err?.message || ''); $('fErr').hidden = false; }
+  finally { b.disabled = false; }
+});
+
+// Copy summary
+$('copyBtn').addEventListener('click', async () => {
+  const ps = sortedPeople();
+  const lines = ['栖心一班 微岗位认领统计（' + new Date().toLocaleDateString('zh-CN') + '）', '已报名 ' + ps.length + ' 人', ''];
+  CATS.forEach(c => {
+    lines.push('【' + c.name + '】');
+    c.roles.forEach(([id, name]) => { const names = ps.filter(p => (p.roles || []).includes(id)).map(p => p.name); lines.push('  ' + name + '：' + (names.length ? names.join('、') : '（空缺）')); });
+    lines.push('');
+  });
+  lines.push('【组修时间】');
+  TIMES.forEach(t => lines.push('  ' + t + '：' + (ps.filter(p => (p.times || []).includes(t)).map(p => p.name).join('、') || '（无）')));
+  const text = lines.join('\n');
+  try { await navigator.clipboard.writeText(text); toast('已复制到剪贴板'); }
+  catch (_) {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    toast('请按 Ctrl/Cmd+C 复制'); setTimeout(() => ta.remove(), 8000);
+  }
+});
+
+// Data（Google Sheet via Apps Script；见 scripts/banfei/README.md）
+async function apiPost(body) {
+  const r = await fetch(API, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+  return r.json();
+}
+async function load() {
+  const r = await QX.api('signups');
+  if (!r.ok) throw new Error(r.error || '读取失败');
+  people = r.people || []; render(); setStatus('on', '已连接 · ' + people.length + ' 人');
+}
+render();
+if (!API) { setStatus('ro', '未配置后端 · 只读'); $('addBtn').disabled = true; }
+else {
+  setStatus('ro', '读取中…');
+  QX.ready().then(load).catch(() => setStatus('ro', '连接失败 · 请刷新'));
+  setInterval(() => { if (!$('dlg').open) load().catch(() => {}); }, 60000);
+}
+</script>
+</body>
+</html>
