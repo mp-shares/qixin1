@@ -220,12 +220,12 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     var out = [];
     if (fee) {
       var restricted = fee.restricted || [], rBal = restricted.reduce(function (a, p) { return a + (+p.balance || 0); }, 0);
-      out.push('<div class="stat hero"><div class="k"><i></i>班费 · 当前结余</div><div class="big">' + fmt(fee.balance) + '</div><div class="pl"><span>随喜供养<b>' + fmt(fee.unrestricted) + '</b></span><span>专项供养<b>' + fmt(rBal) + '</b></span>' + restricted.map(function (p) { return '<span>' + esc(p.purpose) + '<b>' + fmt(p.balance) + '</b></span>'; }).join('') + '</div><div class="d">截至 ' + esc(fee.asOf) + ' · <a href="班费公示.html">完整公示 ›</a></div></div>');
+      out.push('<div class="stat hero"><div class="k"><i></i>班费 · 当前结余</div><div class="big">' + fmt(fee.balance) + '</div><div class="pl"><span>随喜供养<b>' + fmt(fee.unrestricted) + '</b></span><span>专项供养<b>' + fmt(rBal) + '</b></span>' + restricted.map(function (p) { return '<span>' + esc(p.purpose) + '<b>' + fmt(p.balance) + '</b></span>'; }).join('') + '</div><div class="d">截至 ' + esc(fee.asOf) + ' · <a href="班费公示.html">完整公示 ›</a> · <a href="班费公示.html#pay">缴纳班费 ›</a></div></div>');
       var weekly = (fee.weekly || []).slice(0, 4);
       out.push('<div class="stat"><div class="k"><i class="in"></i>本周与本月</div><div class="big in">' + fmt(fee.thisWeek ? fee.thisWeek.in : 0) + '</div><div class="d">本周收入' + (fee.thisWeek ? '（' + md(fee.thisWeek.start) + '–' + md(fee.thisWeek.end) + '）' : '') + '<br>本月收入 <b>' + fmt(fee.monthIn) + '</b> · 本月支出 <b>' + fmt(fee.monthOut) + '</b></div>' + mini(weekly, 'in', function (w, i) { return md(w.start) + '–' + md(w.end) + (i === 0 ? ' 本周' : ''); }, '') + '</div>');
       if ((fee.expenseAll || []).length) out.push('<div class="stat"><div class="k"><i class="out"></i>支出去向 · 累计</div><div class="big"><small>共 ' + fee.expenseAll.length + ' 类</small></div>' + mini(fee.expenseAll, 'amount', function (c) { return esc(c.category); }, 'o') + '</div>');
     } else {
-      out.push('<div class="stat"><div class="k"><i></i>班费 · 当前结余</div><div class="big"><small>待发布</small></div><div class="d">第一期公示发布后，这里显示结余与收支汇总。</div></div>');
+      out.push('<div class="stat"><div class="k"><i></i>班费 · 当前结余</div><div class="big"><small>待发布</small></div><div class="d">第一期公示发布后，这里显示结余与收支汇总。<br><a href="班费公示.html#pay">缴纳班费 ›</a></div></div>');
     }
     if (signups) {
       var n = signups.length, roles = {}, cnt = 0;

@@ -276,6 +276,7 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
 </dialog>
 
 <script src="banfei.config.js"></script>
+<script src="gate.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const API = (window.BANFEI_API || '').trim();
@@ -530,7 +531,7 @@ $('key').addEventListener('keydown', ev => { if (ev.key === 'Enter') $('loginBtn
 $('logout').addEventListener('click', ev => { ev.preventDefault(); logout(); });
 render();
 if (!API) { setStatus('ro', '未配置后端'); $('gate').hidden = false; $('gate').textContent = '还没有配置后端地址：请按 scripts/banfei/README.md 部署 Apps Script，把 Web App URL 填进 banfei.config.js。'; }
-else { let k = ''; try { k = localStorage.getItem('bf-key') || ''; } catch (_) {} if (k) enter(k); else logout(); }
+else { QX.ready().then(() => { let k = ''; try { k = localStorage.getItem('bf-key') || ''; } catch (_) {} if (k) enter(k); else logout(); }); }
 </script>
 </body>
 </html>
