@@ -336,12 +336,12 @@ $('mform').addEventListener('submit', async e => {
   $('mgo').disabled = true;
   try {
     const r = await apiPost({ action: 'signup_ping', key: k });
-    if (r && r.ok && r.auth) { mkey = k; try { localStorage.setItem('wgw-key', k); } catch (_) {} $('mdlg').close(); setMode(true); toast('已进入班委管理'); }
+    if (r && r.ok && r.auth) { mkey = k; try { localStorage.setItem('wgw-key', k); } catch (_) {} $('mdlg').close(); setMode(true); toast('已进入班委管理'); load().catch(() => {}); }
     else { $('merr').textContent = '口令不对。'; $('merr').hidden = false; }
   } catch (_) { $('merr').textContent = '连不上服务器。'; $('merr').hidden = false; }
   finally { $('mgo').disabled = false; }
 });
-$('exitBtn').addEventListener('click', () => { mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} setMode(false); });
+$('exitBtn').addEventListener('click', () => { mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} if (location.hash === '#manage') { history.replaceState(null, '', location.pathname); location.reload(); return; } setMode(false); });
 $('addBtn').addEventListener('click', () => openEditor(null));
 $('closeBtn').addEventListener('click', () => $('dlg').close());
 $('cancelBtn').addEventListener('click', () => $('dlg').close());
@@ -414,7 +414,7 @@ async function apiPost(body) {
   return r.json();
 }
 async function load() {
-  const r = await QX.api('signups');
+  const r = (manage || location.hash === '#manage') && mkey ? await apiPost({ action: 'signups', key: mkey }) : await QX.api('signups');
   if (!r.ok) throw new Error(r.error || '读取失败');
   people = r.people || []; render(); setStatus('on', '已连接 · ' + people.length + ' 人');
 }
@@ -422,10 +422,16 @@ render();
 if (!API) { setStatus('ro', '未配置后端 · 只读'); $('manageBtn').disabled = true; }
 else {
   setStatus('ro', '读取中…');
-  QX.ready().then(load).then(async () => {
+  (async () => {
+    // 班委入口（#manage）：只问班委口令，不经班级口令
+    if (location.hash === '#manage') {
+      if (mkey) { try { const r = await apiPost({ action: 'signup_ping', key: mkey }); if (r && r.ok && r.auth) { setMode(true); await load(); return; } } catch (_) {} mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} }
+      setStatus('ro', '请输入班委口令'); $('manageBtn').click(); return;
+    }
+    // 全班入口：班级口令后进入展示模式；本机已有有效班委口令则直接进管理
+    await QX.ready(); await load();
     if (mkey) { try { const r = await apiPost({ action: 'signup_ping', key: mkey }); if (r && r.ok && r.auth) setMode(true); else { mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} } } catch (_) {} }
-    if (!manage && location.hash === '#manage') $('manageBtn').click();
-  }).catch(() => setStatus('ro', '连接失败 · 请刷新'));
+  })().catch(() => setStatus('ro', '连接失败 · 请刷新'));
   setInterval(() => { if (!$('dlg').open) load().catch(() => {}); }, 60000);
 }
 </script>
