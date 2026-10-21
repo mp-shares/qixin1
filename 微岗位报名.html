@@ -141,12 +141,14 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
   <div class="bar">
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-roles" aria-selected="true" data-view="roles">按岗位</button>
-      <button role="tab" id="tab-people" aria-selected="false" data-view="people">按人员</button>
+      <button role="tab" id="tab-people" aria-selected="false" data-view="people" hidden>按人员</button>
       <button role="tab" id="tab-time" aria-selected="false" data-view="time">组修时间</button>
     </div>
     <div class="actions">
-      <button class="btn" id="copyBtn">复制统计文本</button>
-      <button class="btn primary" id="addBtn">＋ 添加报名</button>
+      <button class="btn" id="manageBtn">班委管理</button>
+      <button class="btn" id="copyBtn" hidden>复制统计文本</button>
+      <button class="btn primary" id="addBtn" hidden>＋ 添加报名</button>
+      <button class="btn" id="exitBtn" hidden>退出管理</button>
     </div>
   </div>
 
@@ -154,10 +156,7 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
   <section class="view" id="view-people" hidden></section>
   <section class="view" id="view-time" hidden></section>
 
-  <footer>
-    全班可看。点名字可查看该人的报名，修改和添加需要班委口令。数据保存在班级的 Google Sheet，每分钟自动刷新。<br>
-    修学支持 5 岗 · 关怀服务 5 岗 · 传灯活动 5 岗 · 班级共建 5 岗，共 20 个微岗位。
-  </footer>
+  <footer id="foot">修学支持 5 岗 · 关怀服务 5 岗 · 传灯活动 5 岗 · 班级共建 5 岗，共 20 个微岗位。每人至少认领 1 项，可轮换，可多人协作。</footer>
 </div>
 
 <dialog id="dlg">
@@ -176,6 +175,16 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
       <div><button type="button" class="btn danger" id="delBtn" hidden>删除此人</button></div>
       <div class="right"><button type="button" class="btn" id="cancelBtn">取消</button><button type="submit" class="btn primary" id="saveBtn">保存</button></div>
     </div>
+  </form>
+</dialog>
+<dialog id="mdlg">
+  <form id="mform" method="dialog">
+    <div class="dhead"><h3>班委管理</h3><button type="button" class="btn" id="mclose">关闭</button></div>
+    <div class="dbody">
+      <div class="field"><label class="lab" for="mkey">班委口令</label><input type="password" id="mkey" autocomplete="off" placeholder="由班委提供"></div>
+      <div class="err" id="merr" hidden></div>
+    </div>
+    <div class="dfoot"><div></div><div class="right"><button type="submit" class="btn primary" id="mgo">进入管理</button></div></div>
   </form>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
@@ -218,7 +227,8 @@ const TIMES = ['周四晚', '周五早', '周五晚'];
 const TOTAL_ROLES = Object.keys(ROLE).length;
 
 const API = (window.BANFEI_API || '').trim();
-let people = [], editingId = null, view = 'roles';
+let people = [], editingId = null, view = 'roles', manage = false, mkey = '';
+try { mkey = localStorage.getItem('wgw-key') || ''; } catch (_) {}
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -250,8 +260,8 @@ function render() {
       }).join('') + '</div>';
   }).join('');
 
-  // 按人员
-  if (!ps.length) {
+  // 按人员（仅班委管理模式，含备注）
+  if (!manage) { $('view-people').innerHTML = ''; } else if (!ps.length) {
     $('view-people').innerHTML = `<div class="empty"><b>还没有报名记录</b>点右上角「添加报名」录入第一位同学，或等待数据加载。</div>`;
   } else {
     $('view-people').innerHTML = `<div class="tablewrap"><table><thead><tr><th>姓名</th><th>组修时间</th><th>认领岗位</th><th>其他 / 备注</th><th></th></tr></thead><tbody>` +
@@ -272,7 +282,7 @@ function render() {
     (otherTimes.length ? `<div class="role"><div class="name"><span>其他</span></div><div class="people">${otherTimes.map(({ t, p }) => chip(p, esc(p.name) + ' · ' + esc(t))).join('')}</div></div>` : '') +
     `</div>`;
 }
-function chip(p, label) { return `<button class="chip" data-edit="${esc(p.id)}">${label || esc(p.name)}</button>`; }
+function chip(p, label) { return manage ? `<button class="chip" data-edit="${esc(p.id)}">${label || esc(p.name)}</button>` : `<span class="chip">${label || esc(p.name)}</span>`; }
 
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-edit]');
@@ -303,7 +313,7 @@ function openEditor(id) {
   document.querySelectorAll('#fRoles input').forEach(i => i.checked = !!(p && (p.roles || []).includes(i.value)));
   $('delBtn').hidden = !p; $('delBtn').textContent = '删除此人'; $('delBtn').dataset.armed = '';
   $('fErr').hidden = true;
-  try { $('fKey').value = localStorage.getItem('wgw-key') || ''; } catch (_) {}
+  $('fKey').value = mkey; $('fKey').closest('.field').hidden = !!mkey;
   const ro = !API;
   $('form').querySelectorAll('input, textarea').forEach(i => i.disabled = ro);
   $('saveBtn').disabled = ro; $('delBtn').disabled = ro;
@@ -311,6 +321,27 @@ function openEditor(id) {
   $('dlg').showModal();
   if (!ro) $('fName').focus();
 }
+function setMode(on) {
+  manage = on;
+  $('manageBtn').hidden = on; $('exitBtn').hidden = !on; $('copyBtn').hidden = !on; $('addBtn').hidden = !on;
+  $('tab-people').hidden = !on;
+  if (!on && view === 'people') document.getElementById('tab-roles').click();
+  render();
+}
+$('manageBtn').addEventListener('click', () => { $('merr').hidden = true; $('mkey').value = mkey; $('mdlg').showModal(); $('mkey').focus(); });
+$('mclose').addEventListener('click', () => $('mdlg').close());
+$('mform').addEventListener('submit', async e => {
+  e.preventDefault();
+  const k = $('mkey').value.trim(); if (!k) { $('merr').textContent = '请输入班委口令。'; $('merr').hidden = false; return; }
+  $('mgo').disabled = true;
+  try {
+    const r = await apiPost({ action: 'signup_ping', key: k });
+    if (r && r.ok && r.auth) { mkey = k; try { localStorage.setItem('wgw-key', k); } catch (_) {} $('mdlg').close(); setMode(true); toast('已进入班委管理'); }
+    else { $('merr').textContent = '口令不对。'; $('merr').hidden = false; }
+  } catch (_) { $('merr').textContent = '连不上服务器。'; $('merr').hidden = false; }
+  finally { $('mgo').disabled = false; }
+});
+$('exitBtn').addEventListener('click', () => { mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} setMode(false); });
 $('addBtn').addEventListener('click', () => openEditor(null));
 $('closeBtn').addEventListener('click', () => $('dlg').close());
 $('cancelBtn').addEventListener('click', () => $('dlg').close());
@@ -388,10 +419,13 @@ async function load() {
   people = r.people || []; render(); setStatus('on', '已连接 · ' + people.length + ' 人');
 }
 render();
-if (!API) { setStatus('ro', '未配置后端 · 只读'); $('addBtn').disabled = true; }
+if (!API) { setStatus('ro', '未配置后端 · 只读'); $('manageBtn').disabled = true; }
 else {
   setStatus('ro', '读取中…');
-  QX.ready().then(load).catch(() => setStatus('ro', '连接失败 · 请刷新'));
+  QX.ready().then(load).then(async () => {
+    if (mkey) { try { const r = await apiPost({ action: 'signup_ping', key: mkey }); if (r && r.ok && r.auth) setMode(true); else { mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} } } catch (_) {} }
+    if (!manage && location.hash === '#manage') $('manageBtn').click();
+  }).catch(() => setStatus('ro', '连接失败 · 请刷新'));
   setInterval(() => { if (!$('dlg').open) load().catch(() => {}); }, 60000);
 }
 </script>
