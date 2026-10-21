@@ -59,7 +59,6 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .band>h2{font-family:var(--display);font-size:19px;font-weight:700;margin:0;display:flex;align-items:center;gap:10px}
 .band>h2::before{content:"";width:6px;height:20px;border-radius:3px;background:var(--accent)}
 .band>h2 small{font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.06em;margin-left:auto}
-.band.staff{background:var(--lock-band);border:1px solid var(--line);border-radius:18px;padding:16px 16px 18px;align-self:stretch}
 .band.staff>h2::before{background:var(--lock)}
 
 /* ① carousel */
@@ -107,21 +106,18 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .stat .mini .amt{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
 .stat.empty-state{color:var(--muted);font-size:13.5px}
 
-/* ③ ④ side by side on wide screens, stacked on phones */
+/* ③ ④ side by side on wide screens, stacked on phones; plain link lists, no boxes */
 .two-up{display:grid;grid-template-columns:minmax(0,1fr);gap:30px;min-width:0}
-@media (min-width:640px){ .two-up{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start} }
-.cards{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
-a.card{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto auto;gap:4px 14px;align-content:start;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;color:inherit;text-decoration:none;min-width:0;box-shadow:var(--shadow);transition:transform .15s,border-color .15s}
-a.card:hover{transform:translateY(-2px);border-color:var(--accent)}
-a.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.card .mg{grid-row:1/4;width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center;font-family:var(--display);font-size:20px;font-weight:700}
-.band.staff .card .mg{background:var(--lock-bg);color:var(--lock)}
-.card .t{font-family:var(--display);font-size:17px;font-weight:700;line-height:1.3;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-.card .t .go{font-family:var(--body);color:var(--accent);font-size:13px;font-weight:500;white-space:nowrap}
-.card .d{font-size:13.5px;color:var(--muted);min-width:0;line-height:1.5}
-.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
-.tag{font-size:11.5px;padding:2px 9px;border-radius:999px;background:var(--soft);color:var(--muted)}
-.tag.lock{background:var(--lock-bg);color:var(--lock)}
+@media (min-width:640px){ .two-up{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:start} }
+.list{display:grid;grid-template-columns:minmax(0,1fr)}
+a.row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:12px 2px;border-top:1px solid var(--line);color:inherit;text-decoration:none;min-width:0}
+.list a.row:first-child{border-top:0;padding-top:4px}
+a.row:hover .t{color:var(--accent)}
+a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.row .t{font-family:var(--display);font-size:16.5px;font-weight:700;line-height:1.3;transition:color .15s}
+.row .go{color:var(--accent);font-size:13px;white-space:nowrap;align-self:center}
+.row .d{grid-column:1/-1;font-size:13px;color:var(--muted);line-height:1.5;min-width:0}
+.row .d .tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;background:var(--lock-bg);color:var(--lock);margin-left:6px;vertical-align:1px}
 footer{font-size:12.5px;color:var(--muted);line-height:1.7;padding:0 4px;border-top:1px solid var(--line);padding-top:16px}
 footer b{color:var(--ink);font-weight:600}
 </style>
@@ -161,11 +157,11 @@ footer b{color:var(--ink);font-weight:600}
   <div class="two-up">
     <section class="band" id="projects">
       <h2>项目入口</h2>
-      <div class="cards" id="projectCards"></div>
+      <div class="list" id="projectCards"></div>
     </section>
     <section class="band staff" id="staff">
       <h2>义工操作区 <small>凭口令进入</small></h2>
-      <div class="cards" id="staffCards"></div>
+      <div class="list" id="staffCards"></div>
     </section>
   </div>
 
@@ -177,7 +173,7 @@ footer b{color:var(--ink);font-weight:600}
 <script>
 (function () {
   /* 内容配置（维护者看，不显示）：SLIDES_STATIC 固定轮播页 {k,t,d}；PROJECTS 项目卡 {mg 单字标记,t,d,url}；STAFF 义工区 {mg,t,d,url,who,key}。
-     轮播照片：Drive「DC1班活动图片归档/看板轮播」有图优先，否则自动取最新活动的精选或最新几张。公示更新：账本「公示」页点「发布到公示页」。 */
+     （mg 字段保留备用，当前列表样式不显示。）轮播照片：Drive「DC1班活动图片归档/看板轮播」有图优先，否则自动取最新活动的精选或最新几张。公示更新：账本「公示」页点「发布到公示页」。 */
   var SLIDES_STATIC = []; // 需要固定通知页时在这里加 { k, t, d }
   var PROJECTS = [
     { mg: '费', t: '班费公示', d: '结余、每周每月收入、支出分类汇总。', url: '班费公示.html' },
@@ -200,8 +196,8 @@ footer b{color:var(--ink);font-weight:600}
   // ③ ④
   var card = function (p, lock) {
     var ext = /^https?:/.test(p.url);
-    var tags = lock ? '<span class="tags"><span class="tag">' + esc(p.who) + '</span><span class="tag lock">' + esc(p.key) + '</span></span>' : '<span class="tags"></span>';
-    return '<a class="card" href="' + esc(p.url) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '><span class="mg">' + esc(p.mg) + '</span><span class="t">' + esc(p.t) + '<span class="go">打开 ' + (ext ? '↗' : '›') + '</span></span><span class="d">' + esc(p.d) + '</span>' + tags + '</a>';
+    var tag = lock ? '<span class="tag">' + esc(p.who) + ' · ' + esc(p.key) + '</span>' : '';
+    return '<a class="row" href="' + esc(p.url) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '><span class="t">' + esc(p.t) + '</span><span class="go">' + (ext ? '↗' : '›') + '</span><span class="d">' + esc(p.d) + tag + '</span></a>';
   };
   $('projectCards').innerHTML = PROJECTS.map(function (p) { return card(p, false); }).join('');
   $('staffCards').innerHTML = STAFF.map(function (p) { return card(p, true); }).join('');
