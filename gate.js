@@ -45,7 +45,13 @@ window.QX = (function () {
   function api(action, extra) {
     var body = Object.assign({ action: action, ckey: getKey() }, extra || {});
     return post(body).then(function (r) {
-      if (r && !r.ok && /口令/.test(r.error || '')) { setKey(''); return showGate('口令已失效，请重新输入').then(function () { return api(action, extra); }); }
+      if (r && !r.ok && /口令/.test(r.error || '')) {
+        // 先确认是不是班级口令本身失效，避免别的接口报「口令不对」时误清掉班级口令
+        return post({ action: 'class_ping', ckey: getKey() }).then(function (p) {
+          if (p && p.ok && p.auth) return r;
+          setKey(''); return showGate('口令已失效，请重新输入').then(function () { return api(action, extra); });
+        });
+      }
       return r;
     });
   }
