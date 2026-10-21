@@ -184,7 +184,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var fmt = function (n) { return (n < 0 ? '-' : '') + '$' + Math.abs(+n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-  var md = function (s) { var a = String(s).split('-'); return +a[1] + '/' + +a[2]; };
+  var md = function (s) { var a = String(s).split('-'); return (+a[1] || 0) + '/' + (+a[2] || 0); };
   var API = (window.BANFEI_API || '').trim();
   var now = new Date();
   $('today').textContent = now.getFullYear() + ' 年 ' + (now.getMonth() + 1) + ' 月 ' + now.getDate() + ' 日 · ' + ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][now.getDay()];

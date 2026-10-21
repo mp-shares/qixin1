@@ -287,8 +287,9 @@ const fmt = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', 
 const pad = n => String(n).padStart(2, '0');
 const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const today = () => iso(new Date());
-const md = s => { const [, m, d] = s.split('-'); return +m + '/' + +d; };
-const ym = s => { const [y, m] = s.split('-'); return y + '年' + +m + '月'; };
+const md = s => { const [, m, d] = String(s).split('-'); return (+m || 0) + '/' + (+d || 0); };
+const ym = s => { const [y, m] = String(s).split('-'); return (+y || 0) + '年' + (+m || 0) + '月'; };
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 function mondayOf(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; }
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2800); }
@@ -356,7 +357,7 @@ function render() {
     : '<tr><td colspan="5" class="empty">还没有记录。点右下角「记一笔」录入第一笔。</td></tr>';
   const months = [...new Set(entries.map(e => e.date.slice(0, 7)))].sort().reverse();
   const fm = $('fMonth'), cur = fm.value;
-  fm.innerHTML = '<option value="">全部月份</option>' + months.map(m => `<option value="${m}">${ym(m)}</option>`).join('');
+  fm.innerHTML = '<option value="">全部月份</option>' + months.map(m => `<option value="${esc(m)}">${ym(m)}</option>`).join('');
   if (months.includes(cur)) fm.value = cur;
   renderLedger();
   $('pubText').textContent = pubText(s);
@@ -377,7 +378,7 @@ function renderLedger() {
     const i = es.reduce((a, e) => a + (e.kind === 'in' ? +e.amount : 0), 0), o = es.reduce((a, e) => a + (e.kind === 'out' ? +e.amount : 0), 0);
     return `<div class="mgroup"><div class="mhead"><b>${ym(mon)}</b><span class="t"><span class="i">收 ${fmt(i)}</span><span class="o">支 ${fmt(o)}</span></span></div>` +
       es.map(e => `<div class="entry ${e.kind}" data-id="${esc(e.id)}" tabindex="0" role="button">
-        <div class="d">${md(e.date)}<br><small>${e.date.slice(0, 4)}</small></div>
+        <div class="d">${md(e.date)}<br><small>${esc(e.date.slice(0, 4))}</small></div>
         <div class="m"><div class="c">${esc(e.kind === 'in' ? e.category : (e.category || '未分类'))}${e.purpose ? `<span class="p"> · ${esc(e.purpose)}</span>` : ''}${e.receipt ? '<span class="chip">凭证</span>' : ''}</div><div class="n">${esc([e.who, e.note].filter(Boolean).join(' · ') || '—')}</div></div>
         <div class="a">${e.kind === 'in' ? '+' : '−'}${fmt(+e.amount)}</div>
       </div>`).join('') + '</div>';
@@ -513,7 +514,7 @@ async function load() {
   setStatus('ro', '读取中…');
   const [r, p] = await Promise.all([apiPost({ action: 'list', key }), apiPost({ action: 'summary', key }).catch(() => null)]);
   if (!r.ok) throw fail(r);
-  entries = (r.entries || []).map(e => ({ ...e, amount: +e.amount }));
+  entries = (r.entries || []).filter(e => DATE_RE.test(String(e.date || ''))).map(e => ({ ...e, amount: +e.amount }));
   lastPub = p?.summary || null;
   render(); setStatus('on', '已连接 · ' + entries.length + ' 笔');
 }
