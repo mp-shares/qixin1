@@ -59,7 +59,7 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .band>h2{font-family:var(--display);font-size:19px;font-weight:700;margin:0;display:flex;align-items:center;gap:10px}
 .band>h2::before{content:"";width:6px;height:20px;border-radius:3px;background:var(--accent)}
 .band>h2 small{font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.06em;margin-left:auto}
-.band.staff{background:var(--lock-band);border:1px solid var(--line);border-radius:18px;padding:18px 18px 20px}
+.band.staff{background:var(--lock-band);border:1px solid var(--line);border-radius:18px;padding:16px 16px 18px;align-self:stretch}
 .band.staff>h2::before{background:var(--lock)}
 
 /* ① carousel */
@@ -107,8 +107,10 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .stat .mini .amt{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
 .stat.empty-state{color:var(--muted);font-size:13.5px}
 
-/* ③ ④ cards */
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+/* ③ ④ side by side on wide screens, stacked on phones */
+.two-up{display:grid;grid-template-columns:minmax(0,1fr);gap:30px;min-width:0}
+@media (min-width:640px){ .two-up{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start} }
+.cards{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 a.card{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto auto;gap:4px 14px;align-content:start;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;color:inherit;text-decoration:none;min-width:0;box-shadow:var(--shadow);transition:transform .15s,border-color .15s}
 a.card:hover{transform:translateY(-2px);border-color:var(--accent)}
 a.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -156,15 +158,16 @@ footer b{color:var(--ink);font-weight:600}
     <div class="stats" id="stats"></div>
   </section>
 
-  <section class="band" id="projects">
-    <h2>项目入口</h2>
-    <div class="cards" id="projectCards"></div>
-  </section>
-
-  <section class="band staff" id="staff">
-    <h2>义工操作区 <small>凭口令进入</small></h2>
-    <div class="cards" id="staffCards"></div>
-  </section>
+  <div class="two-up">
+    <section class="band" id="projects">
+      <h2>项目入口</h2>
+      <div class="cards" id="projectCards"></div>
+    </section>
+    <section class="band staff" id="staff">
+      <h2>义工操作区 <small>凭口令进入</small></h2>
+      <div class="cards" id="staffCards"></div>
+    </section>
+  </div>
 
   <footer>班费收入分<b>随喜供养</b>（非限定用途）与<b>专项供养</b>（指定用途）两类。公示只显示汇总，明细与凭证由记账义工保管。</footer>
 </div>
