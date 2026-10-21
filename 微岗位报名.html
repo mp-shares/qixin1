@@ -168,7 +168,7 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
       <div id="fRoles"></div>
       <div class="field"><label class="lab" for="fOther">其他岗位或说明</label><input type="text" id="fOther" autocomplete="off" placeholder="清单之外想承担的事，可留空"></div>
       <div class="field"><label class="lab" for="fNote">对承担班委的想法 / 备注</label><textarea id="fNote"></textarea></div>
-      <div class="field"><label class="lab" for="fKey">班委口令（修改报名需要，本机会记住）</label><input type="password" id="fKey" autocomplete="off" placeholder="由班委提供"></div>
+      <div class="field"><label class="lab" for="fKey">班委口令（修改报名需要，本机会记住）</label><input type="text" id="fKey" name="qx-committee-code" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="由班委提供"></div>
       <div class="err" id="fErr" hidden></div>
     </div>
     <div class="dfoot">
@@ -181,7 +181,7 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
   <form id="mform" method="dialog">
     <div class="dhead"><h3>班委管理</h3><button type="button" class="btn" id="mclose">关闭</button></div>
     <div class="dbody">
-      <div class="field"><label class="lab" for="mkey">班委口令</label><input type="password" id="mkey" autocomplete="off" placeholder="由班委提供"></div>
+      <div class="field"><label class="lab" for="mkey">班委口令</label><input type="text" id="mkey" name="qx-committee-code" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="由班委提供"></div>
       <div class="err" id="merr" hidden></div>
     </div>
     <div class="dfoot"><div></div><div class="right"><button type="submit" class="btn primary" id="mgo">进入管理</button></div></div>

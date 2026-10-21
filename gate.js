@@ -26,7 +26,7 @@ window.QX = (function () {
       var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
       var el = document.createElement('div'); el.id = 'qx-gate';
       el.innerHTML = '<form class="box"><div class="eb">MindfulPeace · 栖心一班</div><h1>班级口令</h1><p>本页仅供栖心一班同学查看。输入班委发的班级口令，本机会记住。</p>' +
-        '<input type="password" id="qx-key" autocomplete="current-password" placeholder="班级口令" autofocus><div class="err" id="qx-err">' + (msg || '') + '</div><button type="submit" id="qx-go">进入</button></form>';
+        '<input type="text" id="qx-key" name="qx-class-code" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" data-lpignore="true" data-1p-ignore placeholder="班级口令" autofocus><div class="err" id="qx-err">' + (msg || '') + '</div><button type="submit" id="qx-go">进入</button></form>';
       document.body.appendChild(el);
       var inp = el.querySelector('#qx-key'), err = el.querySelector('#qx-err'), btn = el.querySelector('#qx-go');
       setTimeout(function () { inp.focus(); }, 50);
