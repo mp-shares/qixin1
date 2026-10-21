@@ -82,7 +82,7 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dots button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* ② stat cards */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:stretch}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:grid;align-content:start;gap:6px;min-width:0;box-shadow:var(--shadow)}
 .stat.hero{grid-column:1/-1;background:linear-gradient(135deg,var(--accent-soft),var(--card) 60%)}
 .stat .k{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
@@ -104,7 +104,6 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .stat .mini .tr b{position:absolute;inset:0 auto 0 0;background:var(--in);border-radius:4px;min-width:2px}
 .stat .mini .tr b.o{background:var(--out)}
 .stat .mini .amt{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
-.stat.empty-state{color:var(--muted);font-size:13.5px}
 
 /* ③ ④ side by side on wide screens, stacked on phones; plain link lists, no boxes */
 .two-up{display:grid;grid-template-columns:minmax(0,1fr);gap:30px;min-width:0}
@@ -229,7 +228,7 @@ footer b{color:var(--ink);font-weight:600}
       out.push('<div class="stat"><div class="k"><i class="in"></i>本周与本月</div><div class="big in">' + fmt(fee.thisWeek ? fee.thisWeek.in : 0) + '</div><div class="d">本周收入' + (fee.thisWeek ? '（' + md(fee.thisWeek.start) + '–' + md(fee.thisWeek.end) + '）' : '') + '<br>本月收入 <b>' + fmt(fee.monthIn) + '</b> · 本月支出 <b>' + fmt(fee.monthOut) + '</b></div>' + mini(weekly, 'in', function (w, i) { return md(w.start) + '–' + md(w.end) + (i === 0 ? ' 本周' : ''); }, '') + '</div>');
       if ((fee.expenseAll || []).length) out.push('<div class="stat"><div class="k"><i class="out"></i>支出去向 · 累计</div><div class="big"><small>共 ' + fee.expenseAll.length + ' 类</small></div>' + mini(fee.expenseAll, 'amount', function (c) { return esc(c.category); }, 'o') + '</div>');
     } else {
-      out.push('<div class="stat hero empty-state"><div class="k"><i></i>班费</div>第一期公示发布后，这里显示结余与收支汇总。</div>');
+      out.push('<div class="stat"><div class="k"><i></i>班费 · 当前结余</div><div class="big"><small>待发布</small></div><div class="d">第一期公示发布后，这里显示结余与收支汇总。</div></div>');
     }
     if (signups) {
       var n = signups.length, roles = {}, cnt = 0;
