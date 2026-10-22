@@ -285,10 +285,14 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
       <div class="f" id="fPurposeIn" hidden style="margin-top:10px"><label for="purposeIn">指定用途（选已有的，或直接输入新用途）</label><input id="purposeIn" list="purposeList" placeholder="如：法师供养 / 禅修营 / 结业礼物"><div class="chips" id="cPurposeIn" hidden></div></div>
     </div>
     <div id="secOut" hidden>
-      <div class="f2">
-        <div class="f"><label for="category">支出类别（可直接输入新类别）</label><input id="category" list="catList" placeholder="如：餐饮 / 物料 / 场地"><div class="chips" id="cCategory" hidden></div></div>
-        <div class="f"><label for="purposeOut">动用专项（可不填）</label><select id="purposeOut"><option value="">不动用专项 · 从随喜支出</option></select></div>
+      <div class="f"><label>资金来源</label>
+        <div class="radios">
+          <label><input type="radio" name="src" value="free" id="srcFree" checked>随喜供养（非限定）</label>
+          <label><input type="radio" name="src" value="restricted" id="srcRestricted">专项供养（指定用途）</label>
+        </div>
       </div>
+      <div class="f" id="fPurposeOut" hidden style="margin-top:10px"><label for="purposeOut">动用哪笔专项</label><input id="purposeOut" list="purposeList" placeholder="选一笔专项供养"><div class="chips" id="cPurposeOut" hidden></div></div>
+      <div class="f" style="margin-top:10px"><label for="category">支出类别（可直接输入新类别）</label><input id="category" list="catList" placeholder="如：餐饮 / 物料 / 场地"><div class="chips" id="cCategory" hidden></div></div>
     </div>
     <div class="f2">
       <div class="f"><label for="who" id="whoLabel">供养人 / 经手人</label><input id="who" list="whoList" placeholder="法名或姓名"><div class="chips" id="cWho" hidden></div></div>
@@ -373,6 +377,7 @@ const pubPayload = s => ({ class: '栖心一班', asOf: s.asOf, currency: s.curr
 const recent = () => [...entries].sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')));
 const purposes = () => [...new Set(recent().map(e => e.purpose).filter(Boolean))];
 const expCats = () => [...new Set([...recent().filter(e => e.kind === 'out').map(e => e.category).filter(Boolean), ...DEFAULT_EXP])];
+const funds = () => compute().restricted.filter(p => p.in > 0).map(p => ({ v: p.purpose, label: p.purpose + ' · 余 ' + fmt(p.balance) }));
 const whos = () => [...new Set(recent().map(e => e.who).filter(Boolean))];
 
 // ---------- render ----------
@@ -467,8 +472,9 @@ function syncKind() {
   $('secIn').hidden = !isIn; $('secOut').hidden = isIn;
   $('whoLabel').textContent = isIn ? '供养人' : '经手人';
   $('fPurposeIn').hidden = !$('incatRestricted').checked;
+  $('fPurposeOut').hidden = !$('srcRestricted').checked;
 }
-form.querySelectorAll('input[name=kind],input[name=incat]').forEach(r => r.addEventListener('change', syncKind));
+form.querySelectorAll('input[name=kind],input[name=incat],input[name=src]').forEach(r => r.addEventListener('change', syncKind));
 // 凭证本体经后端取回（dataURL），页面内直接看，不走 Drive 权限
 const rcache = new Map();
 function fetchReceipt(id) {
@@ -518,7 +524,7 @@ $('rlist').addEventListener('click', ev => {
 function chips(boxId, inputId, values) {
   const box = $(boxId), inp = $(inputId), vals = values.slice(0, 12);
   box.hidden = !vals.length;
-  box.innerHTML = vals.map(v => `<button type="button" data-v="${esc(v)}" aria-pressed="${inp.value.trim() === v}">${esc(v)}</button>`).join('');
+  box.innerHTML = vals.map(x => { const v = typeof x === 'string' ? x : x.v, label = typeof x === 'string' ? x : x.label; return `<button type="button" data-v="${esc(v)}" aria-pressed="${inp.value.trim() === v}">${esc(label)}</button>`; }).join('');
 }
 function syncChips() {
   document.querySelectorAll('.chips').forEach(box => { const inp = box.previousElementSibling; box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', inp.value.trim() === b.dataset.v)); });
@@ -532,16 +538,15 @@ function openDialog(e) {
   editing = e || null; pendingFiles = []; dropIds = []; form.reset(); $('file').value = '';
   $('dlgTitle').textContent = e ? '修改记录' : '记一笔';
   $('delBtn').hidden = !e; $('delBtn').textContent = '删除'; $('delBtn').dataset.arm = '';
-  const po = $('purposeOut'); po.innerHTML = '<option value="">不动用专项 · 从随喜支出</option>' + purposes().map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
   if (e) {
     (e.kind === 'in' ? $('kindIn') : $('kindOut')).checked = true;
     $('date').value = e.date; $('amount').value = (+e.amount).toFixed(2);
     if (e.kind === 'in') { (e.category === '专项供养' ? $('incatRestricted') : $('incatFree')).checked = true; $('purposeIn').value = e.purpose || ''; }
-    else { $('category').value = e.category || ''; if (e.purpose && ![...po.options].some(o => o.value === e.purpose)) po.add(new Option(e.purpose, e.purpose)); po.value = e.purpose || ''; }
+    else { $('category').value = e.category || ''; (e.purpose ? $('srcRestricted') : $('srcFree')).checked = true; $('purposeOut').value = e.purpose || ''; }
     $('who').value = e.who || ''; $('note').value = e.note || '';
   } else { $('date').value = today(); }
   syncKind(); showReceipt();
-  chips('cPurposeIn', 'purposeIn', purposes()); chips('cCategory', 'category', expCats()); chips('cWho', 'who', whos());
+  chips('cPurposeIn', 'purposeIn', purposes()); chips('cPurposeOut', 'purposeOut', funds()); chips('cCategory', 'category', expCats()); chips('cWho', 'who', whos());
   dlg.showModal();
 }
 $('addBtn').addEventListener('click', () => openDialog(null));
@@ -575,7 +580,7 @@ form.addEventListener('submit', async ev => {
   if (!(amount > 0)) { toast('请填金额'); return; }
   let category, purpose;
   if (kind === 'in') { category = $('incatRestricted').checked ? '专项供养' : '随喜供养'; purpose = category === '专项供养' ? $('purposeIn').value.trim() : ''; if (category === '专项供养' && !purpose) { toast('专项供养请填指定用途'); return; } }
-  else { category = $('category').value.trim(); purpose = $('purposeOut').value; if (!category) { toast('请填支出类别'); return; } }
+  else { category = $('category').value.trim(); purpose = $('srcRestricted').checked ? $('purposeOut').value.trim() : ''; if ($('srcRestricted').checked && !purpose) { toast('请选动用哪笔专项'); return; } if (!category) { toast('请填支出类别'); return; } }
   const btn = $('saveBtn'); btn.disabled = true; btn.textContent = pendingFiles.length ? `上传凭证 0/${pendingFiles.length}…` : '保存中…';
   try {
     const files = []; let total = 0;
