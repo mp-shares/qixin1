@@ -148,10 +148,15 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
 .radios{display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
 .radios label{display:inline-flex;gap:6px;align-items:center;cursor:pointer;padding:6px 0}
 .radios input{width:auto}
-.receipt{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.receipt img{max-height:72px;max-width:120px;border-radius:6px;border:1px solid var(--line)}
-.receipt .file{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
-.receipt a{color:var(--accent)}
+.receipt{display:grid;gap:8px}
+.rlist{display:flex;gap:8px;flex-wrap:wrap}
+.rv{position:relative;display:grid;gap:3px;width:88px;font-size:11px;color:var(--muted);text-align:center}
+.rv a,.rv .ph{display:grid;place-items:center;width:88px;height:72px;border-radius:8px;border:1px solid var(--line);background:var(--soft);overflow:hidden;color:var(--accent);text-decoration:none;font-size:12px}
+.rv img{width:100%;height:100%;object-fit:cover}
+.rv .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rv .x{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:var(--ink);color:var(--card);font-size:14px;line-height:22px;padding:0;cursor:pointer}
+.rv.new a,.rv.new .ph{border-style:dashed}
+.rhint{font-size:12px;color:var(--muted)}
 .dfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:4px}
 .dfoot .right{display:flex;gap:8px;margin-left:auto}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;z-index:20;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
@@ -277,7 +282,9 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
     </div>
     <div class="f"><label for="file">凭证（照片或 PDF）</label>
       <div class="receipt" id="receiptBox">
-        <input type="file" id="file" accept="image/*,application/pdf" style="width:auto;max-width:100%">
+        <div class="rlist" id="rlist"></div>
+        <input type="file" id="file" accept="image/*,application/pdf" multiple style="width:auto;max-width:100%">
+        <div class="rhint">可一次选多张，照片会自动压缩；每条记录最多 8 个文件。</div>
       </div>
     </div>
     <datalist id="purposeList"></datalist><datalist id="catList"></datalist><datalist id="whoList"></datalist>
@@ -294,7 +301,8 @@ const $ = id => document.getElementById(id);
 const API = (window.BANFEI_API || '').trim();
 const DEFAULT_EXP = ['餐饮', '物料', '场地', '供养法师', '打印', '交通', '其他'];
 const OK_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'];
-let key = '', entries = [], editing = null, pendingFile = null, dropReceipt = false, expRange = 'month', lastPub = null;
+let key = '', entries = [], editing = null, pendingFiles = [], dropIds = [], expRange = 'month', lastPub = null;
+const MAX_RECEIPTS = 8;
 
 const fmt = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pad = n => String(n).padStart(2, '0');
@@ -393,7 +401,7 @@ function renderLedger() {
     return `<div class="mgroup"><div class="mhead"><b>${ym(mon)}</b><span class="t"><span class="i">收 ${fmt(i)}</span><span class="o">支 ${fmt(o)}</span></span></div>` +
       es.map(e => `<div class="entry ${e.kind}" data-id="${esc(e.id)}" tabindex="0" role="button">
         <div class="d">${md(e.date)}<br><small>${esc(e.date.slice(0, 4))}</small></div>
-        <div class="m"><div class="c">${esc(e.kind === 'in' ? e.category : (e.category || '未分类'))}${e.purpose ? `<span class="p"> · ${esc(e.purpose)}</span>` : ''}${e.receipt ? '<span class="chip">凭证</span>' : ''}</div><div class="n">${esc([e.who, e.note].filter(Boolean).join(' · ') || '—')}</div></div>
+        <div class="m"><div class="c">${esc(e.kind === 'in' ? e.category : (e.category || '未分类'))}${e.purpose ? `<span class="p"> · ${esc(e.purpose)}</span>` : ''}${(e.receipts || []).length ? `<span class="chip">凭证${e.receipts.length > 1 ? '×' + e.receipts.length : ''}</span>` : ''}</div><div class="n">${esc([e.who, e.note].filter(Boolean).join(' · ') || '—')}</div></div>
         <div class="a">${e.kind === 'in' ? '+' : '−'}${fmt(+e.amount)}</div><div class="go" aria-hidden="true">›</div>
       </div>`).join('') + '</div>';
   }).join('');
@@ -446,17 +454,19 @@ function syncKind() {
 form.querySelectorAll('input[name=kind],input[name=incat]').forEach(r => r.addEventListener('change', syncKind));
 const driveView = id => 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view';
 const driveThumb = id => 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w240';
-function showReceipt(e) {
-  const box = $('receiptBox'); box.querySelectorAll('.rv').forEach(n => n.remove());
-  const r = e?.receipt; if (!r || dropReceipt) return;
-  const div = document.createElement('div'); div.className = 'rv receipt';
-  const isImg = (r.type || '').startsWith('image/');
-  div.innerHTML = `<a href="${driveView(r.id)}" target="_blank" rel="noopener">${isImg ? `<img src="${driveThumb(r.id)}" alt="凭证" onerror="this.replaceWith(document.createTextNode('查看凭证'))">` : '查看凭证 PDF'}</a><span class="file">${esc(r.name || '')}</span><button type="button" class="btn" id="rmReceipt">移除凭证</button>`;
-  box.appendChild(div);
-  $('rmReceipt').addEventListener('click', () => { dropReceipt = true; div.remove(); });
+function showReceipt() {
+  const list = $('rlist'), had = (editing?.receipts || []).filter(r => !dropIds.includes(r.id));
+  list.innerHTML = had.map(r => `<div class="rv" data-id="${esc(r.id)}"><a href="${driveView(r.id)}" target="_blank" rel="noopener">${(r.type || '').startsWith('image/') ? `<img src="${driveThumb(r.id)}" alt="凭证" onerror="this.replaceWith(document.createTextNode('查看'))">` : 'PDF'}</a><span class="nm">${esc(r.name || '')}</span><button type="button" class="x" aria-label="移除">×</button></div>`).join('')
+    + pendingFiles.map((f, i) => `<div class="rv new" data-i="${i}"><span class="ph">${f.type.startsWith('image/') ? '<img alt="">' : 'PDF'}</span><span class="nm">${esc(f.name)}</span><button type="button" class="x" aria-label="移除">×</button></div>`).join('');
+  pendingFiles.forEach((f, i) => { if (!f.type.startsWith('image/')) return; const img = list.querySelector(`.rv[data-i="${i}"] img`); if (img) { const u = URL.createObjectURL(f); img.src = u; img.onload = () => URL.revokeObjectURL(u); } });
 }
+$('rlist').addEventListener('click', ev => {
+  const x = ev.target.closest('.x'); if (!x) return; const rv = x.closest('.rv');
+  if (rv.dataset.id) dropIds.push(rv.dataset.id); else pendingFiles.splice(+rv.dataset.i, 1);
+  showReceipt();
+});
 function openDialog(e) {
-  editing = e || null; pendingFile = null; dropReceipt = false; form.reset(); $('file').value = '';
+  editing = e || null; pendingFiles = []; dropIds = []; form.reset(); $('file').value = '';
   $('dlgTitle').textContent = e ? '修改记录' : '记一笔';
   $('delBtn').hidden = !e; $('delBtn').textContent = '删除'; $('delBtn').dataset.arm = '';
   const po = $('purposeOut'); po.innerHTML = '<option value="">不动用专项 · 从随喜支出</option>' + purposes().map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
@@ -467,7 +477,7 @@ function openDialog(e) {
     else { $('category').value = e.category || ''; if (e.purpose && ![...po.options].some(o => o.value === e.purpose)) po.add(new Option(e.purpose, e.purpose)); po.value = e.purpose || ''; }
     $('who').value = e.who || ''; $('note').value = e.note || '';
   } else { $('date').value = today(); }
-  syncKind(); showReceipt(e);
+  syncKind(); showReceipt();
   dlg.showModal();
 }
 $('addBtn').addEventListener('click', () => openDialog(null));
@@ -475,8 +485,12 @@ $('closeBtn').addEventListener('click', () => dlg.close()); $('cancelBtn').addEv
 function openRow(ev) { const row = ev.target.closest('.entry'); if (!row) return; const e = entries.find(x => x.id === row.dataset.id); if (e) { ev.preventDefault(); openDialog(e); } }
 $('ledger').addEventListener('click', openRow);
 $('ledger').addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') openRow(ev); });
-$('ledger').addEventListener('keydown', ev => { if (ev.key === 'Enter') ev.target.closest('.entry')?.click(); });
-$('file').addEventListener('change', () => { pendingFile = $('file').files[0] || null; if (pendingFile) dropReceipt = false; });
+$('file').addEventListener('change', () => {
+  const have = (editing?.receipts || []).filter(r => !dropIds.includes(r.id)).length + pendingFiles.length;
+  const add = [...$('file').files];
+  if (have + add.length > MAX_RECEIPTS) { toast(`每条记录最多 ${MAX_RECEIPTS} 个凭证`); add.length = Math.max(0, MAX_RECEIPTS - have); }
+  pendingFiles.push(...add); $('file').value = ''; showReceipt();
+});
 
 async function shrink(file) {
   if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
@@ -498,17 +512,20 @@ form.addEventListener('submit', async ev => {
   let category, purpose;
   if (kind === 'in') { category = $('incatRestricted').checked ? '专项供养' : '随喜供养'; purpose = category === '专项供养' ? $('purposeIn').value.trim() : ''; if (category === '专项供养' && !purpose) { toast('专项供养请填指定用途'); return; } }
   else { category = $('category').value.trim(); purpose = $('purposeOut').value; if (!category) { toast('请填支出类别'); return; } }
-  const btn = $('saveBtn'); btn.disabled = true; btn.textContent = pendingFile ? '上传凭证…' : '保存中…';
+  const btn = $('saveBtn'); btn.disabled = true; btn.textContent = pendingFiles.length ? `上传凭证 0/${pendingFiles.length}…` : '保存中…';
   try {
-    let file = null;
-    if (pendingFile) {
-      const blob = await shrink(pendingFile); const type = blob.type || pendingFile.type;
-      if (!OK_TYPES.includes(type)) throw new Error('凭证请用 JPG / PNG / PDF');
-      if (blob.size > 10 * 1024 * 1024) throw new Error('凭证文件过大（上限 10MB）');
-      file = { name: pendingFile.name, type, data: await toBase64(blob), date };
+    const files = []; let total = 0;
+    for (const [i, pf] of pendingFiles.entries()) {
+      btn.textContent = `压缩凭证 ${i + 1}/${pendingFiles.length}…`;
+      const blob = await shrink(pf); const type = blob.type || pf.type;
+      if (!OK_TYPES.includes(type)) throw new Error(`「${pf.name}」请用 JPG / PNG / PDF`);
+      if (blob.size > 10 * 1024 * 1024) throw new Error(`「${pf.name}」过大（单个上限 10MB）`);
+      total += blob.size; if (total > 20 * 1024 * 1024) throw new Error('凭证合计超过 20MB，请分两次保存');
+      files.push({ name: pf.name, type, data: await toBase64(blob), date });
     }
+    if (files.length) btn.textContent = '上传中…';
     const entry = { id: editing?.id, kind, date, amount, category, purpose: purpose || '', who: $('who').value.trim(), note: $('note').value.trim() };
-    const r = await apiPost(editing ? { action: 'update', key, entry, file, dropReceipt } : { action: 'add', key, entry, file });
+    const r = await apiPost(editing ? { action: 'update', key, entry, files, dropIds } : { action: 'add', key, entry, files });
     if (!r.ok) throw fail(r);
     dlg.close(); toast(editing ? '已修改' : '已记录 ' + (kind === 'in' ? '收入 ' : '支出 ') + fmt(amount));
     await load();
