@@ -492,8 +492,12 @@ async function showView() {
   const body = $('vBody'); body.innerHTML = '<div class="msg">读取中…</div>';
   try {
     const src = await it.src(); if (vItems[vIdx] !== it) return;
-    if ((it.type || '').startsWith('image/')) body.innerHTML = `<img src="${src}" alt="${esc(it.name || '凭证')}">`;
-    else { body.innerHTML = `<div class="msg"><p>PDF 凭证</p><button type="button" class="btn" id="vOpen">打开 PDF</button></div>`; $('vOpen').addEventListener('click', async () => { const b = await (await fetch(src)).blob(); const u = URL.createObjectURL(b); const w = window.open(u, '_blank'); if (!w) { const a = document.createElement('a'); a.href = u; a.download = it.name || 'receipt.pdf'; a.click(); } }); }
+    if ((it.type || '').startsWith('image/')) { if (!/^(blob:|data:image\/(png|jpeg|gif|webp);base64,)/.test(src)) throw new Error('凭证格式不对'); body.innerHTML = `<img src="${src}" alt="${esc(it.name || '凭证')}">`; }
+    else { body.innerHTML = `<div class="msg"><p>PDF 凭证</p><button type="button" class="btn" id="vOpen">打开 PDF</button></div>`; $('vOpen').addEventListener('click', async () => {
+      const raw = await (await fetch(src)).arrayBuffer();
+      if (String.fromCharCode(...new Uint8Array(raw.slice(0, 5))) !== '%PDF-') { toast('这个文件不是有效的 PDF'); return; }
+      const u = URL.createObjectURL(new Blob([raw], { type: 'application/pdf' })); const w = window.open(u, '_blank'); if (!w) { const a = document.createElement('a'); a.href = u; a.download = it.name || 'receipt.pdf'; a.click(); }
+    }); }
   } catch (e) { body.innerHTML = `<div class="msg">${esc(e.message || '读取失败')}</div>`; }
   if (vItems.length > 1) body.insertAdjacentHTML('beforeend', '<button type="button" class="nav l" id="vPrev">‹</button><button type="button" class="nav r" id="vNext">›</button>');
 }
