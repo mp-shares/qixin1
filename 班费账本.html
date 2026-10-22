@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="robots" content="noindex">
 <title>栖心一班班费账本</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
@@ -117,27 +117,36 @@ pre.pub{white-space:pre-wrap;font-family:var(--body);font-size:14px;background:v
 .login{display:grid;gap:10px;max-width:360px}
 .login input{font-size:18px;letter-spacing:.1em}
 
-dialog{border:0;border-radius:16px;padding:0;background:var(--card);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 40px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog{border:0;border-radius:16px;padding:0;background:var(--card);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 40px);box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+dialog[open]{display:grid;grid-template-rows:auto minmax(0,1fr)}
+body:has(dialog[open]){overflow:hidden}
+@media (max-width:600px){
+  dialog{position:fixed;inset:auto 0 0 0;margin:0;width:100%;max-width:none;max-height:100dvh;border-radius:18px 18px 0 0}
+  form{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  .dfoot{position:sticky;bottom:calc(-14px - env(safe-area-inset-bottom,0px));background:var(--card);padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));margin:0 0 calc(-14px - env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+  .dfoot .btn{padding:11px 16px;font-size:15px}
+  .dfoot .right{flex:1} .dfoot .right .btn{flex:1}
+}
 dialog::backdrop{background:rgba(10,12,20,.5)}
 .dhead{display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;border-bottom:1px solid var(--line)}
 .dhead h3{margin:0;font-family:var(--display);font-size:18px}
-form{padding:14px 18px 18px;display:grid;gap:12px}
-.kind{display:grid;grid-template-columns:1fr 1fr;gap:6px;border:1px solid var(--line);border-radius:10px;padding:4px}
+form{padding:14px 18px 18px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;overflow:auto;min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.kind{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:6px;border:1px solid var(--line);border-radius:10px;padding:4px}
 .kind label{text-align:center;padding:8px;border-radius:7px;cursor:pointer;font-weight:600;color:var(--muted)}
-.kind input{position:absolute;opacity:0;pointer-events:none}
+.kind input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;left:0;top:0}
 .kind label:has(input:checked){background:var(--soft);color:var(--ink)}
 .kind label.in:has(input:checked){background:var(--in-bg);color:var(--in)}
 .kind label.out:has(input:checked){background:var(--out-bg);color:var(--out)}
-.f{display:grid;gap:4px}
+.f{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;min-width:0}
 .f label{font-size:12px;color:var(--muted)}
-.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media (max-width:420px){ .f2{grid-template-columns:1fr} }
+.f2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;min-width:0}
+@media (max-width:420px){ .f2{grid-template-columns:minmax(0,1fr)} }
 input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);width:100%;min-width:0}
 .amount-wrap{position:relative}
 .amount-wrap span{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
 .amount-wrap input{padding-left:24px;font-variant-numeric:tabular-nums}
 .radios{display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
-.radios label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.radios label{display:inline-flex;gap:6px;align-items:center;cursor:pointer;padding:6px 0}
 .radios input{width:auto}
 .receipt{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .receipt img{max-height:72px;max-width:120px;border-radius:6px;border:1px solid var(--line)}
