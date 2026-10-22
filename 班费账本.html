@@ -433,16 +433,30 @@ function renderLedger() {
 }
 
 function pubText(s) {
+  // 发群用的月度公示：本月收支 → 当前结余 → 累计，一屏读完
+  const m = s.thisMonth, me = entries.filter(e => e.date.startsWith(m));
+  const sumBy = (list, f) => list.reduce((a, e) => a + (f(e) ? +e.amount : 0), 0);
+  const mFree = sumBy(me, e => e.kind === 'in' && e.category === '随喜供养');
+  const mRes = {}; me.forEach(e => { if (e.kind === 'in' && e.category === '专项供养') mRes[e.purpose] = (mRes[e.purpose] || 0) + +e.amount; });
+  const nIn = me.filter(e => e.kind === 'in').length, nOut = me.filter(e => e.kind === 'out').length;
   const L = [];
-  L.push(`栖心一班 班费公示（截至 ${s.asOf}）`);
-  L.push(`当前结余：${fmt(s.balance)}`);
-  L.push(`　随喜供养（非限定）：${fmt(s.unrestricted)}`);
-  if (s.restricted.length) L.push(`　专项供养：` + s.restricted.map(p => `${p.purpose} ${fmt(p.balance)}`).join('；'));
-  L.push(`本周收入（${md(s.thisWeek.start)}–${md(s.thisWeek.end)}）：${fmt(s.thisWeek.in)}`);
-  L.push(`本月收入（${ym(s.thisMonth)}）：${fmt(s.monthIn)}`);
-  L.push(`本月支出：${fmt(s.monthOut)}` + (s.expenseMonth.length ? '（' + s.expenseMonth.map(c => `${c.category} ${fmt(c.amount)}`).join('、') + '）' : ''));
-  if (s.expenseAll.length) L.push(`累计支出分类：` + s.expenseAll.map(c => `${c.category} ${fmt(c.amount)}`).join('、'));
+  L.push(`【栖心一班 班费公示】${ym(m)}`);
+  L.push(`截至 ${md(s.asOf)}`);
+  L.push('');
+  L.push(`本月收入 ${fmt(s.monthIn)}${nIn ? `（${nIn} 笔）` : ''}`);
+  if (nIn) {
+    L.push(`　随喜供养 ${fmt(mFree)}`);
+    Object.entries(mRes).forEach(([p, v]) => L.push(`　专项供养·${p} ${fmt(v)}`));
+  }
+  L.push(`本月支出 ${fmt(s.monthOut)}${nOut ? `（${nOut} 笔）` : ''}`);
+  s.expenseMonth.forEach(c => L.push(`　${c.category} ${fmt(c.amount)}`));
+  L.push('');
+  L.push(`当前结余 ${fmt(s.balance)}`);
+  L.push(`　随喜（非限定）${fmt(s.unrestricted)}`);
+  s.restricted.filter(p => p.balance).forEach(p => L.push(`　专项·${p.purpose} ${fmt(p.balance)}`));
+  L.push('');
   L.push(`累计收入 ${fmt(s.totalIn)} · 累计支出 ${fmt(s.totalOut)} · 共 ${s.count} 笔`);
+  L.push('感恩各位师兄护持 🙏 明细与凭证由记账义工保管，有疑问请联系班委。');
   return L.join('\n');
 }
 
