@@ -157,6 +157,9 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
 .rv .x{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:var(--ink);color:var(--card);font-size:14px;line-height:22px;padding:0;cursor:pointer}
 .rv.new a,.rv.new .ph{border-style:dashed}
 .rhint{font-size:12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips button{font:inherit;font-size:13px;padding:4px 11px;border-radius:999px;border:1px solid var(--line);background:var(--soft);color:var(--ink);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink,#fff);border-color:transparent}
 .rv .ph{cursor:pointer;color:var(--muted)} .rv .ph.img{color:transparent}
 #viewer{width:100vw;max-width:100vw;max-height:100dvh;height:100dvh;margin:0;border-radius:0;background:#0b0d12;color:#fff;inset:0;position:fixed}
 #viewer[open]{display:grid;grid-template-rows:auto minmax(0,1fr)}
@@ -279,16 +282,16 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
           <label><input type="radio" name="incat" value="专项供养" id="incatRestricted">专项供养（指定用途）</label>
         </div>
       </div>
-      <div class="f" id="fPurposeIn" hidden style="margin-top:10px"><label for="purposeIn">指定用途（选已有的，或直接输入新用途）</label><input id="purposeIn" list="purposeList" placeholder="如：法师供养 / 禅修营 / 结业礼物"></div>
+      <div class="f" id="fPurposeIn" hidden style="margin-top:10px"><label for="purposeIn">指定用途（选已有的，或直接输入新用途）</label><input id="purposeIn" list="purposeList" placeholder="如：法师供养 / 禅修营 / 结业礼物"><div class="chips" id="cPurposeIn" hidden></div></div>
     </div>
     <div id="secOut" hidden>
       <div class="f2">
-        <div class="f"><label for="category">支出类别（可直接输入新类别）</label><input id="category" list="catList" placeholder="如：餐饮 / 物料 / 场地"></div>
+        <div class="f"><label for="category">支出类别（可直接输入新类别）</label><input id="category" list="catList" placeholder="如：餐饮 / 物料 / 场地"><div class="chips" id="cCategory" hidden></div></div>
         <div class="f"><label for="purposeOut">动用专项（可不填）</label><select id="purposeOut"><option value="">不动用专项 · 从随喜支出</option></select></div>
       </div>
     </div>
     <div class="f2">
-      <div class="f"><label for="who" id="whoLabel">供养人 / 经手人</label><input id="who" list="whoList" placeholder="法名或姓名"></div>
+      <div class="f"><label for="who" id="whoLabel">供养人 / 经手人</label><input id="who" list="whoList" placeholder="法名或姓名"><div class="chips" id="cWho" hidden></div></div>
       <div class="f"><label for="note">备注</label><input id="note" placeholder="用途说明、事由"></div>
     </div>
     <div class="f"><label for="file">凭证（照片或 PDF）</label>
@@ -367,9 +370,10 @@ function compute() {
   };
 }
 const pubPayload = s => ({ class: '栖心一班', asOf: s.asOf, currency: s.currency, balance: s.balance, unrestricted: s.unrestricted, restricted: s.restricted.map(p => ({ purpose: p.purpose, balance: p.balance })), thisWeek: { start: s.thisWeek.start, end: s.thisWeek.end, in: s.thisWeek.in }, monthIn: s.monthIn, monthOut: s.monthOut, weekly: s.weekly.map(w => ({ start: w.start, end: w.end, in: w.in })), monthly: s.monthly.slice(0, 6).map(m => ({ month: m.month, in: m.in })), expenseMonth: s.expenseMonth, expenseAll: s.expenseAll });
-const purposes = () => [...new Set(entries.map(e => e.purpose).filter(Boolean))].sort();
-const expCats = () => [...new Set([...entries.filter(e => e.kind === 'out').map(e => e.category).filter(Boolean), ...DEFAULT_EXP])];
-const whos = () => [...new Set(entries.map(e => e.who).filter(Boolean))].sort();
+const recent = () => [...entries].sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')));
+const purposes = () => [...new Set(recent().map(e => e.purpose).filter(Boolean))];
+const expCats = () => [...new Set([...recent().filter(e => e.kind === 'out').map(e => e.category).filter(Boolean), ...DEFAULT_EXP])];
+const whos = () => [...new Set(recent().map(e => e.who).filter(Boolean))];
 
 // ---------- render ----------
 function render() {
@@ -510,6 +514,20 @@ $('rlist').addEventListener('click', ev => {
   if (ev.target.closest('.x')) { if (rv.dataset.id) dropIds.push(rv.dataset.id); else pendingFiles.splice(+rv.dataset.i, 1); showReceipt(); return; }
   openViewer(viewItems(), +rv.dataset.v);
 });
+// 已用过的值做成可点的选项（手机上 datalist 不好用）；点一下填入，再点取消
+function chips(boxId, inputId, values) {
+  const box = $(boxId), inp = $(inputId), vals = values.slice(0, 12);
+  box.hidden = !vals.length;
+  box.innerHTML = vals.map(v => `<button type="button" data-v="${esc(v)}" aria-pressed="${inp.value.trim() === v}">${esc(v)}</button>`).join('');
+}
+function syncChips() {
+  document.querySelectorAll('.chips').forEach(box => { const inp = box.previousElementSibling; box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', inp.value.trim() === b.dataset.v)); });
+}
+document.querySelectorAll('.chips').forEach(box => {
+  const inp = box.previousElementSibling;
+  box.addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; inp.value = inp.value.trim() === b.dataset.v ? '' : b.dataset.v; syncChips(); inp.dispatchEvent(new Event('input')); });
+  inp.addEventListener('input', syncChips);
+});
 function openDialog(e) {
   editing = e || null; pendingFiles = []; dropIds = []; form.reset(); $('file').value = '';
   $('dlgTitle').textContent = e ? '修改记录' : '记一笔';
@@ -523,6 +541,7 @@ function openDialog(e) {
     $('who').value = e.who || ''; $('note').value = e.note || '';
   } else { $('date').value = today(); }
   syncKind(); showReceipt();
+  chips('cPurposeIn', 'purposeIn', purposes()); chips('cCategory', 'category', expCats()); chips('cWho', 'who', whos());
   dlg.showModal();
 }
 $('addBtn').addEventListener('click', () => openDialog(null));
@@ -592,7 +611,7 @@ async function load() {
   setStatus('ro', '读取中…');
   const [r, p] = await Promise.all([apiPost({ action: 'list', key }), apiPost({ action: 'summary', key }).catch(() => null)]);
   if (!r.ok) throw fail(r);
-  entries = (r.entries || []).filter(e => DATE_RE.test(String(e.date || ''))).map(e => ({ ...e, amount: +e.amount }));
+  entries = (r.entries || []).filter(e => DATE_RE.test(String(e.date || ''))).map(e => ({ ...e, amount: +e.amount, receipts: e.receipts || (e.receipt ? [e.receipt] : []) }));
   lastPub = p?.summary || null;
   render(); setStatus('on', '已连接 · ' + entries.length + ' 笔');
 }
