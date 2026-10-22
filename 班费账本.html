@@ -319,7 +319,6 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
 <script>
 const $ = id => document.getElementById(id);
 const API = (window.BANFEI_API || '').trim();
-const DEFAULT_EXP = ['餐饮', '物料', '场地', '供养法师', '打印', '交通', '其他'];
 const OK_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'];
 let key = '', entries = [], editing = null, pendingFiles = [], dropIds = [], expRange = 'month', lastPub = null;
 const MAX_RECEIPTS = 8;
@@ -376,7 +375,8 @@ function compute() {
 const pubPayload = s => ({ class: '栖心一班', asOf: s.asOf, currency: s.currency, balance: s.balance, unrestricted: s.unrestricted, restricted: s.restricted.map(p => ({ purpose: p.purpose, balance: p.balance })), thisWeek: { start: s.thisWeek.start, end: s.thisWeek.end, in: s.thisWeek.in }, monthIn: s.monthIn, monthOut: s.monthOut, weekly: s.weekly.map(w => ({ start: w.start, end: w.end, in: w.in })), monthly: s.monthly.slice(0, 6).map(m => ({ month: m.month, in: m.in })), expenseMonth: s.expenseMonth, expenseAll: s.expenseAll });
 const recent = () => [...entries].sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')));
 const purposes = () => [...new Set(recent().map(e => e.purpose).filter(Boolean))];
-const expCats = () => [...new Set([...recent().filter(e => e.kind === 'out').map(e => e.category).filter(Boolean), ...DEFAULT_EXP])];
+// 三类可选标签都只来自现有记录：某个值没有任何记录再用，标签自然消失
+const expCats = () => [...new Set(recent().filter(e => e.kind === 'out').map(e => e.category).filter(Boolean))];
 const funds = () => compute().restricted.filter(p => p.in > 0).map(p => ({ v: p.purpose, label: p.purpose + ' · 余 ' + fmt(p.balance) }));
 const whos = () => [...new Set(recent().map(e => e.who).filter(Boolean))];
 
