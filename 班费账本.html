@@ -157,6 +157,8 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
 .rv .x{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:var(--ink);color:var(--card);font-size:14px;line-height:22px;padding:0;cursor:pointer}
 .rv.new a,.rv.new .ph{border-style:dashed}
 .rhint{font-size:12px;color:var(--muted)}
+.syncrow{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer}
+.syncrow input{width:18px;height:18px;margin:0}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .chips button{font:inherit;font-size:13px;padding:4px 11px;border-radius:999px;border:1px solid var(--line);background:var(--soft);color:var(--ink);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink,#fff);border-color:transparent}
@@ -254,7 +256,7 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
         <button class="btn primary" id="publishBtn">发布到公示页</button>
         <button class="btn" id="copyText">复制公示文本</button>
       </div>
-      <div class="hint">「发布到公示页」把上面的汇总数字（不含明细和凭证）推到公开的 班费公示 页，全班打开即见。「复制公示文本」直接贴到班级群。建议每周发布一次。</div>
+      <div class="hint">「发布到公示页」把上面的汇总数字（不含明细和凭证）推到公开的 班费公示 页，全班打开即见；记账时勾选「同步公示」会自动发布，一般不用手动点。「复制公示文本」贴到班级群，建议每月一次。</div>
     </section>
   </div>
   </div>
@@ -306,6 +308,7 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
       </div>
     </div>
     <datalist id="purposeList"></datalist><datalist id="catList"></datalist><datalist id="whoList"></datalist>
+    <label class="syncrow"><input type="checkbox" id="syncPub" checked>保存后同步更新公示页</label>
     <div class="dfoot">
       <button type="button" class="btn danger" id="delBtn" hidden>删除</button>
       <div class="right"><button type="button" class="btn" id="cancelBtn">取消</button><button type="submit" class="btn primary" id="saveBtn">保存</button></div>
@@ -458,12 +461,24 @@ async function copy(text, label) {
   catch (_) { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); toast('请按 Ctrl/Cmd+C 复制'); setTimeout(() => ta.remove(), 8000); }
 }
 $('copyText').addEventListener('click', () => copy(pubText(compute()), '公示文本'));
+async function publishNow() {
+  const r = await apiPost({ action: 'publish', key, summary: pubPayload(compute()) }); if (!r.ok) throw fail(r);
+  lastPub = { publishedAt: new Date().toISOString() }; render();
+}
 $('publishBtn').addEventListener('click', async () => {
   const b = $('publishBtn'); b.disabled = true; b.textContent = '发布中…';
-  try { const r = await apiPost({ action: 'publish', key, summary: pubPayload(compute()) }); if (!r.ok) throw fail(r); lastPub = { publishedAt: new Date().toISOString() }; render(); toast('已发布到公示页'); }
+  try { await publishNow(); toast('已发布到公示页'); }
   catch (e) { toast(e.message); if (e.auth) logout(); }
   finally { b.disabled = false; b.textContent = '发布到公示页'; }
 });
+// 记账后自动同步公示（勾选状态本机记住）
+try { const v = localStorage.getItem('bf-sync'); if (v !== null) $('syncPub').checked = v === '1'; } catch (_) {}
+$('syncPub').addEventListener('change', () => { try { localStorage.setItem('bf-sync', $('syncPub').checked ? '1' : '0'); } catch (_) {} });
+async function afterChange(msg) {
+  await load();
+  if (!$('syncPub').checked) { toast(msg); return; }
+  try { await publishNow(); toast(msg + ' · 公示已同步'); } catch (e) { toast(msg + ' · 公示同步失败，请到公示页手动发布'); }
+}
 
 // ---------- dialog ----------
 const dlg = $('dlg'), form = $('form');
@@ -596,8 +611,7 @@ form.addEventListener('submit', async ev => {
     const entry = { id: editing?.id, kind, date, amount, category, purpose: purpose || '', who: $('who').value.trim(), note: $('note').value.trim() };
     const r = await apiPost(editing ? { action: 'update', key, entry, files, dropIds } : { action: 'add', key, entry, files });
     if (!r.ok) throw fail(r);
-    dlg.close(); toast(editing ? '已修改' : '已记录 ' + (kind === 'in' ? '收入 ' : '支出 ') + fmt(amount));
-    await load();
+    dlg.close(); await afterChange(editing ? '已修改' : '已记录 ' + (kind === 'in' ? '收入 ' : '支出 ') + fmt(amount));
   } catch (e) { toast(e.message || '保存失败，请重试'); if (e.auth) logout(); }
   finally { btn.disabled = false; btn.textContent = '保存'; }
 });
@@ -606,7 +620,7 @@ $('delBtn').addEventListener('click', async () => {
   const b = $('delBtn');
   if (!b.dataset.arm) { b.dataset.arm = '1'; b.textContent = '确认删除这条？'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '删除'; }, 4000); return; }
   if (!editing) return; b.disabled = true;
-  try { const r = await apiPost({ action: 'delete', key, id: editing.id }); if (!r.ok) throw fail(r); dlg.close(); toast('已删除'); await load(); }
+  try { const r = await apiPost({ action: 'delete', key, id: editing.id }); if (!r.ok) throw fail(r); dlg.close(); await afterChange('已删除'); }
   catch (e) { toast(e.message || '删除失败'); if (e.auth) logout(); } finally { b.disabled = false; }
 });
 
