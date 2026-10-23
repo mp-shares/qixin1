@@ -450,6 +450,8 @@ function pubText(s) {
   }
   L.push(`本月支出 ${fmt(s.monthOut)}${nOut ? `（${nOut} 笔）` : ''}`);
   s.expenseMonth.forEach(c => L.push(`　${c.category} ${fmt(c.amount)}`));
+  const donors = [...new Set(me.filter(e => e.kind === 'in' && e.who).map(e => e.who.trim()).filter(Boolean))];
+  if (donors.length) { L.push(''); L.push(`随喜以下师兄本月的供养：${donors.join('、')}`); }
   L.push('');
   L.push(`当前结余 ${fmt(s.balance)}`);
   L.push(`　随喜（非限定）${fmt(s.unrestricted)}`);
