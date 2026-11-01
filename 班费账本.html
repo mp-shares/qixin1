@@ -110,6 +110,7 @@ td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .fab{position:fixed;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:6;
   background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:14px 22px;font:inherit;font-size:16px;font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,.22);cursor:pointer}
 .fab:disabled{opacity:.4}
+h2 select.pubm{width:auto;font-size:13px;padding:4px 8px;letter-spacing:0;text-transform:none;font-weight:500;color:var(--ink)}
 pre.pub{white-space:pre-wrap;font-family:var(--body);font-size:14px;background:var(--soft);border-radius:10px;padding:12px 14px;margin:0 0 10px;line-height:1.6}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
 .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
@@ -250,13 +251,13 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
 
   <div id="view-publish" hidden>
     <section class="card">
-      <h2>公示 <span id="pubInfo" style="font-weight:400;letter-spacing:0;text-transform:none">尚未发布</span></h2>
+      <h2><span>公示 <span id="pubInfo" style="font-weight:400;letter-spacing:0;text-transform:none">尚未发布</span></span><select id="pubMonth" class="pubm" aria-label="公示月份"></select></h2>
       <pre class="pub" id="pubText"></pre>
       <div class="actions">
         <button class="btn primary" id="publishBtn">发布到公示页</button>
         <button class="btn" id="copyText">复制公示文本</button>
       </div>
-      <div class="hint">「发布到公示页」把上面的汇总数字（不含明细和凭证）推到公开的 班费公示 页，全班打开即见；记账时勾选「同步公示」会自动发布，一般不用手动点。「复制公示文本」贴到班级群，建议每月一次。</div>
+      <div class="hint">「发布到公示页」把当前汇总数字（不含明细和凭证）推到公开的 班费公示 页，全班打开即见；记账时勾选「同步公示」会自动发布，一般不用手动点。「复制公示文本」贴到班级群，建议每月一次；右上角可切换月份，回看或补发往月公示。</div>
     </section>
   </div>
   </div>
@@ -406,7 +407,10 @@ function render() {
   fm.innerHTML = '<option value="">全部月份</option>' + months.map(m => `<option value="${esc(m)}">${ym(m)}</option>`).join('');
   if (months.includes(cur)) fm.value = cur;
   renderLedger();
-  $('pubText').textContent = pubText(s);
+  const pmSel = $('pubMonth'), pmCur = pmSel.value, pms = pubMonths();
+  pmSel.innerHTML = pms.map(m => `<option value="${esc(m)}">${ym(m)}${m === today().slice(0, 7) ? '（本月）' : ''}</option>`).join('');
+  pmSel.value = pms.includes(pmCur) ? pmCur : pms[0];
+  $('pubText').textContent = pubText(pmSel.value);
   $('pubInfo').textContent = lastPub?.publishedAt ? '上次发布 ' + new Date(lastPub.publishedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '尚未发布';
   $('purposeList').innerHTML = purposes().map(p => `<option value="${esc(p)}">`).join('');
   $('catList').innerHTML = expCats().map(p => `<option value="${esc(p)}">`).join('');
@@ -432,32 +436,44 @@ function renderLedger() {
   }).join('');
 }
 
-function pubText(s) {
-  // 发群用的月度公示：本月收支 → 当前结余 → 累计，一屏读完
-  const m = s.thisMonth, me = entries.filter(e => e.date.startsWith(m));
-  const sumBy = (list, f) => list.reduce((a, e) => a + (f(e) ? +e.amount : 0), 0);
-  const mFree = sumBy(me, e => e.kind === 'in' && e.category === '随喜供养');
-  const mRes = {}; me.forEach(e => { if (e.kind === 'in' && e.category === '专项供养') mRes[e.purpose] = (mRes[e.purpose] || 0) + +e.amount; });
+// 可选月份：当月按今天截止，往月按月末截止，结余也按那时点算，便于回看或补发
+const pubMonths = () => { const ms = new Set(entries.map(e => e.date.slice(0, 7))); ms.add(today().slice(0, 7)); return [...ms].sort().reverse(); };
+function pubText(month) {
+  // 发群用的月度公示：当月收支 → 结余 → 累计，一屏读完
+  const m = month || today().slice(0, 7), cur = m === today().slice(0, 7);
+  const [y, mo] = m.split('-').map(Number), lastDay = new Date(y, mo, 0).getDate();
+  const asOf = cur ? today() : m + '-' + pad(lastDay);
+  const upTo = entries.filter(e => e.date <= asOf), me = upTo.filter(e => e.date.startsWith(m));
+  const amt = e => +e.amount || 0, sumK = (list, k) => list.reduce((a, e) => a + (e.kind === k ? amt(e) : 0), 0);
+  const totalIn = sumK(upTo, 'in'), totalOut = sumK(upTo, 'out'), monthIn = sumK(me, 'in'), monthOut = sumK(me, 'out');
+  const pm = {}; upTo.forEach(e => { if (e.purpose) { const p = pm[e.purpose] || (pm[e.purpose] = { purpose: e.purpose, in: 0, out: 0 }); p[e.kind] += amt(e); } });
+  const restricted = Object.values(pm).map(p => ({ ...p, balance: +(p.in - p.out).toFixed(2) })).sort((a, b) => b.balance - a.balance);
+  const rBal = restricted.reduce((a, p) => a + p.balance, 0);
+  const cats = {}; me.forEach(e => { if (e.kind === 'out') { const k = e.category || '未分类'; cats[k] = (cats[k] || 0) + amt(e); } });
+  const expense = Object.entries(cats).map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount);
+  const mFree = me.reduce((a, e) => a + (e.kind === 'in' && e.category === '随喜供养' ? amt(e) : 0), 0);
+  const mRes = {}; me.forEach(e => { if (e.kind === 'in' && e.category === '专项供养') mRes[e.purpose] = (mRes[e.purpose] || 0) + amt(e); });
   const nIn = me.filter(e => e.kind === 'in').length, nOut = me.filter(e => e.kind === 'out').length;
+  const M = cur ? '本月' : mo + '月';
   const L = [];
   L.push(`【栖心一班 班费公示】${ym(m)}`);
-  L.push(`截至 ${md(s.asOf)}`);
+  L.push(`截至 ${md(asOf)}`);
   L.push('');
-  L.push(`本月收入 ${fmt(s.monthIn)}${nIn ? `（${nIn} 笔）` : ''}`);
+  L.push(`${M}收入 ${fmt(monthIn)}${nIn ? `（${nIn} 笔）` : ''}`);
   if (nIn) {
     L.push(`　随喜供养 ${fmt(mFree)}`);
     Object.entries(mRes).forEach(([p, v]) => L.push(`　专项供养·${p} ${fmt(v)}`));
   }
-  L.push(`本月支出 ${fmt(s.monthOut)}${nOut ? `（${nOut} 笔）` : ''}`);
-  s.expenseMonth.forEach(c => L.push(`　${c.category} ${fmt(c.amount)}`));
+  L.push(`${M}支出 ${fmt(monthOut)}${nOut ? `（${nOut} 笔）` : ''}`);
+  expense.forEach(c => L.push(`　${c.category} ${fmt(c.amount)}`));
   const donors = [...new Set(me.filter(e => e.kind === 'in' && e.who).map(e => e.who.trim()).filter(Boolean))];
-  if (donors.length) { L.push(''); L.push(`随喜以下师兄本月的供养：${donors.join('、')}`); }
+  if (donors.length) { L.push(''); L.push(`随喜以下师兄${M}的供养：${donors.join('、')}`); }
   L.push('');
-  L.push(`当前结余 ${fmt(s.balance)}`);
-  L.push(`　随喜（非限定）${fmt(s.unrestricted)}`);
-  s.restricted.filter(p => p.balance).forEach(p => L.push(`　专项·${p.purpose} ${fmt(p.balance)}`));
+  L.push(`${cur ? '当前' : '月末'}结余 ${fmt(totalIn - totalOut)}`);
+  L.push(`　随喜（非限定）${fmt(totalIn - totalOut - rBal)}`);
+  restricted.filter(p => p.balance).forEach(p => L.push(`　专项·${p.purpose} ${fmt(p.balance)}`));
   L.push('');
-  L.push(`累计收入 ${fmt(s.totalIn)} · 累计支出 ${fmt(s.totalOut)} · 共 ${s.count} 笔`);
+  L.push(`累计收入 ${fmt(totalIn)} · 累计支出 ${fmt(totalOut)} · 共 ${upTo.length} 笔`);
   L.push('感恩各位师兄护持 🙏 明细与凭证由记账义工保管，有疑问请联系班委。');
   return L.join('\n');
 }
@@ -476,7 +492,8 @@ async function copy(text, label) {
   try { await navigator.clipboard.writeText(text); toast(label + '已复制'); }
   catch (_) { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); toast('请按 Ctrl/Cmd+C 复制'); setTimeout(() => ta.remove(), 8000); }
 }
-$('copyText').addEventListener('click', () => copy(pubText(compute()), '公示文本'));
+$('copyText').addEventListener('click', () => copy(pubText($('pubMonth').value), '公示文本'));
+$('pubMonth').addEventListener('change', () => { $('pubText').textContent = pubText($('pubMonth').value); });
 async function publishNow() {
   const r = await apiPost({ action: 'publish', key, summary: pubPayload(compute()) }); if (!r.ok) throw fail(r);
   lastPub = { publishedAt: new Date().toISOString() }; render();
