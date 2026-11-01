@@ -458,6 +458,9 @@ function monthReport(month) {
     inRestricted: Object.entries(mRes).map(([purpose, amount]) => ({ purpose, amount: r2(amount) })),
     expense: Object.entries(cats).map(([category, amount]) => ({ category, amount: r2(amount) })).sort((a, b) => b.amount - a.amount),
     donors: [...new Set(me.filter(e => e.kind === 'in' && e.who).map(e => e.who.trim()).filter(Boolean))],
+    // 支出逐笔明细（公示页展示）：只带日期/分类/用途/备注/金额，不带经手人与凭证
+    expenses: me.filter(e => e.kind === 'out').sort((x, y) => x.date < y.date ? -1 : x.date > y.date ? 1 : 0)
+      .map(e => ({ date: e.date, category: e.category || '未分类', purpose: e.purpose || '', note: String(e.note || '').trim(), amount: r2(amt(e)) })),
     balance: r2(totalIn - totalOut), unrestricted: r2(totalIn - totalOut - rBal), restricted,
     totalIn: r2(totalIn), totalOut: r2(totalOut), count: upTo.length,
     monthly: Object.values(mm).sort((a, b) => a.month < b.month ? 1 : -1).map(x => ({ month: x.month, in: r2(x.in), out: r2(x.out), n: x.n })),
@@ -505,8 +508,8 @@ async function copy(text, label) {
 $('copyText').addEventListener('click', () => copy(pubText($('pubMonth').value), '公示文本'));
 $('pubMonth').addEventListener('change', () => { $('pubText').textContent = pubText($('pubMonth').value); });
 async function publishNow() {
-  // 发所选月份 + 当月（当月那份是看板和公示页默认显示的「最新一期」）
-  const sel = $('pubMonth').value, months = [...new Set([sel, curMonth()].filter(Boolean))];
+  // 每次发布所有月份：往月报告随账本修改一起刷新，公示页可切换回看任一月
+  const months = pubMonths();
   const r = await apiPost({ action: 'publish', key, reports: months.map(monthReport) }); if (!r.ok) throw fail(r);
   lastPub = { publishedAt: new Date().toISOString() }; render();
 }

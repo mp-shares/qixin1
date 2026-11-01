@@ -7,7 +7,7 @@
 <title>栖心一班班费公示</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* Layout: top bar (back to dashboard) → masthead with month picker → ① 本期收支（income / expense side by side, donors）② 结余 ③ 每月收支表 ④ 缴纳班费. Each month's report is stored by the backend; the picker fetches that month. */
+/* Layout: top bar (back to dashboard) → masthead with month switcher (‹ select ›) → ① 本期收支（income / expense side by side, donors）② 支出明细 ③ 结余 ④ 每月收支表（rows switch month）⑤ 缴纳班费. Each month's report is stored by the backend; switching fetches that month. */
 :root{
   --bg:#f3f4f7; --card:#ffffff; --ink:#1b2130; --muted:#6a7284; --line:#dde1e8; --soft:#eef0f4;
   --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
@@ -48,8 +48,20 @@ header.mast{display:flex;align-items:flex-end;justify-content:space-between;gap:
 .eyebrow{font-size:12px;letter-spacing:.16em;color:var(--accent);font-weight:600;text-transform:uppercase}
 h1{font-family:var(--display);font-size:28px;font-weight:700;margin:2px 0 0;letter-spacing:.02em;line-height:1.2;text-wrap:balance}
 .asof{font-size:13px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
-select.month{font:inherit;font-size:14px;font-weight:600;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);min-width:0}
-select.month:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mnav{display:flex;align-items:center;gap:6px}
+.mnav button{font:inherit;font-size:18px;line-height:1;width:38px;height:38px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--accent);cursor:pointer}
+.mnav button:disabled{color:var(--line);cursor:default}
+select.month{font:inherit;font-size:14px;font-weight:600;height:38px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);min-width:0}
+select.month:focus-visible,.mnav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ② expense details */
+.ex{margin:0;padding:0;list-style:none}
+.ex li{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
+.ex li:last-child{border-bottom:0}
+.ex .d{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ex .c{font-weight:600;font-size:14.5px;overflow-wrap:anywhere} .ex .c span{font-weight:400;color:var(--muted)}
+.ex .n{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.ex b{color:var(--out);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0;box-shadow:var(--shadow)}
 h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -85,7 +97,8 @@ h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted
 .tbl th,.tbl td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .tbl th{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em}
 .tbl th:first-child,.tbl td:first-child{text-align:left}
-.tbl tr.cur td{font-weight:600}
+.tbl tr.cur td{font-weight:600;background:var(--accent-soft)}
+.tbl tbody tr{cursor:pointer} .tbl tbody tr:hover td{background:var(--soft)} .tbl tbody tr.cur:hover td{background:var(--accent-soft)}
 .tbl td.i{color:var(--in)} .tbl td.o{color:var(--out)}
 .tbl tfoot td{border-bottom:0;color:var(--muted);font-size:13px;padding-top:10px}
 .twrap{overflow-x:auto;margin:0 -4px}
@@ -110,11 +123,11 @@ footer{font-size:12.5px;color:var(--muted);line-height:1.65;padding:0 4px}
 <div class="wrap gutter">
   <header class="mast">
     <div><div class="eyebrow">MindfulPeace · 静心学堂</div><h1 id="title">班费公示</h1><div class="asof" id="asof">读取中…</div></div>
-    <select class="month" id="month" aria-label="选择月份" hidden></select>
+    <div class="mnav" id="mnav" hidden><button type="button" id="prevM" aria-label="上一个月">‹</button><select class="month" id="month" aria-label="选择月份"></select><button type="button" id="nextM" aria-label="下一个月">›</button></div>
   </header>
   <main id="app" style="display:contents"><section><div class="empty">正在读取最近一期公示…</div></section></main>
   <section id="pay" hidden><h2>缴纳班费</h2><div class="pay"><img id="qrImg" alt="班费收款码"><div><div class="h" id="qrName"></div><div class="acct"><span id="qrHandle"></span><button type="button" id="qrCopy">复制账号</button></div><div class="tip">Venmo 扫码或搜索账号转账，备注写<b>法名 + 班费</b>；指定用途的供养请在备注里写明用途。</div></div></div></section>
-  <footer>班费收入分两类：<b>随喜供养</b>（非限定用途）与<b>专项供养</b>（指定用途，专款专用）。本页只公示汇总数字；明细与凭证由记账义工保管，有疑问请联系班委。</footer>
+  <footer>班费收入分两类：<b>随喜供养</b>（非限定用途）与<b>专项供养</b>（指定用途，专款专用）。本页公示收支汇总与每笔支出；凭证由记账义工保管，有疑问请联系班委。</footer>
 </div>
 <script src="banfei.config.js"></script>
 <script src="gate.js"></script>
@@ -130,7 +143,8 @@ const cache = {}; let months = [], data = null;
 
 function render() {
   if (!data) { $('asof').textContent = '尚未发布'; $('app').innerHTML = '<section><div class="empty">记账义工发布第一期公示后，这里会显示收支汇总与结余。</div></section>'; return; }
-  const r = data, M = r.current ? '本月' : (+r.month.slice(5)) + '月';
+  const r = data; if (!r.month) r.month = String(r.asOf || '').slice(0, 7);
+  const M = r.current ? '本月' : (+r.month.slice(5)) + '月';
   const pubAt = r.publishedAt ? new Date(r.publishedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
   $('title').textContent = '班费公示 · ' + ym(r.month);
   $('asof').textContent = '截至 ' + md(r.asOf) + (r.current ? '' : '（月末）') + (pubAt ? ' · 发布于 ' + pubAt : '');
@@ -147,29 +161,39 @@ function render() {
       </div>
       ${(r.donors || []).length ? `<div class="donors"><span class="lead">随喜以下师兄${M}的供养</span><br>${r.donors.map(n => `<span class="nm">${esc(n)}</span>`).join('')}</div>` : ''}
     </section>
+    ${Array.isArray(r.expenses) ? `<section><h2>${M}支出明细<span>${r.expenses.length} 笔</span></h2>${r.expenses.length ? '<ul class="ex">' + r.expenses.map(e => `<li><span class="d">${md(e.date)}</span><div><div class="c">${esc(e.category)}${e.purpose ? `<span> · ${esc(e.purpose)}</span>` : ''}</div>${e.note ? `<div class="n">${esc(e.note)}</div>` : ''}</div><b>${fmt(e.amount)}</b></li>`).join('') + '</ul>' : `<div class="empty">${M}没有支出。</div>`}</section>` : ''}
     <section><h2>${r.current ? '当前' : '月末'}结余</h2><div class="big">${fmt(r.balance)}</div>
       <div class="split"><div><div class="k">随喜供养（非限定）</div><div class="v">${fmt(r.unrestricted)}</div></div><div><div class="k">专项供养（指定用途）</div><div class="v">${fmt(rBal)}</div></div></div>
       ${restricted.length ? '<ul class="pl">' + restricted.map(p => `<li><span>${esc(p.purpose)}</span><b>${fmt(p.balance)}</b></li>`).join('') + '</ul>' : ''}
     </section>
     <section><h2>每月收支</h2>
-      ${rows.length ? `<div class="twrap"><table class="tbl"><thead><tr><th>月份</th><th>收入</th><th>支出</th><th>月末结余</th></tr></thead><tbody>${rows.map(m => `<tr class="${m.month === r.month ? 'cur' : ''}"><td>${ym(m.month)}</td><td class="i">${fmt(m.in)}</td><td class="o">${fmt(m.out)}</td><td>${fmt(m.bal)}</td></tr>`).join('')}</tbody>
+      ${rows.length ? `<div class="twrap"><table class="tbl"><thead><tr><th>月份</th><th>收入</th><th>支出</th><th>月末结余</th></tr></thead><tbody>${rows.map(m => `<tr class="${m.month === r.month ? 'cur' : ''}" data-m="${esc(m.month)}" title="查看${ym(m.month)}"><td>${ym(m.month)}</td><td class="i">${fmt(m.in)}</td><td class="o">${fmt(m.out)}</td><td>${fmt(m.bal)}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td colspan="4">累计收入 ${fmt(r.totalIn)} · 累计支出 ${fmt(r.totalOut)} · 共 ${r.count} 笔</td></tr></tfoot></table></div>` : '<div class="empty">暂无记录。</div>'}
     </section>`;
 }
 function fillMonths() {
   const sel = $('month'), cur = new Date().toISOString().slice(0, 7);
+  if (data && data.month && !months.includes(data.month)) months = [data.month, ...months];
+  months = [...new Set(months)].sort().reverse();
   sel.innerHTML = months.map(m => `<option value="${esc(m)}">${ym(m)}${m === cur ? '（本月）' : ''}</option>`).join('');
   if (data) sel.value = data.month;
-  sel.hidden = months.length < 2;
+  const i = months.indexOf(sel.value);
+  $('prevM').disabled = i < 0 || i >= months.length - 1;   // 列表从新到旧：‹ 往更早
+  $('nextM').disabled = i <= 0;
+  $('mnav').hidden = !months.length;
 }
+const go = m => { if (!m || (data && m === data.month)) return; show(m).catch(() => { $('asof').textContent = '读取失败'; }); };
 async function show(month) {
-  if (cache[month]) { data = cache[month]; render(); return; }
+  if (cache[month]) { data = cache[month]; render(); fillMonths(); return; }
   $('asof').textContent = '读取中…';
   const r = await QX.api('summary', { month });
   if (r && r.ok && r.summary) { cache[r.summary.month] = r.summary; data = r.summary; months = r.months || months; fillMonths(); }
-  render();
+  render(); fillMonths();
 }
-$('month').addEventListener('change', () => show($('month').value).catch(() => { $('asof').textContent = '读取失败'; }));
+$('month').addEventListener('change', () => go($('month').value));
+$('prevM').addEventListener('click', () => go(months[months.indexOf($('month').value) + 1]));
+$('nextM').addEventListener('click', () => go(months[months.indexOf($('month').value) - 1]));
+$('app').addEventListener('click', ev => { const tr = ev.target.closest('tr[data-m]'); if (tr) { go(tr.dataset.m); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
 
 if (!API) { $('asof').textContent = '未配置后端'; $('app').innerHTML = '<section><div class="empty">还没有配置后端地址，请先按 scripts/banfei/README.md 部署。</div></section>'; return; }
 QX.ready().then(() => {
