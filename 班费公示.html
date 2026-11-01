@@ -3,55 +3,95 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
 <title>栖心一班班费公示</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* Layout: one narrow reading column, like a notice posted on the wall: balance first, then weekly/monthly income, then expense categories. */
+/* Layout: top bar (back to dashboard) → masthead with month picker → ① 本期收支（income / expense side by side, donors）② 结余 ③ 每月收支表 ④ 缴纳班费. Each month's report is stored by the backend; the picker fetches that month. */
 :root{
   --bg:#f3f4f7; --card:#ffffff; --ink:#1b2130; --muted:#6a7284; --line:#dde1e8; --soft:#eef0f4;
-  --accent:#36479f; --in:#1d7a4e; --out:#b6412b;
+  --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
+  --in:#1d7a4e; --in-bg:#e3f3ea; --out:#b6412b; --out-bg:#f8e6e1;
+  --shadow:0 1px 2px rgba(20,25,40,.05),0 8px 24px -12px rgba(20,25,40,.18);
   --display:'Noto Serif SC','Songti SC','SimSun',serif;
   --body:system-ui,-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#13161d; --card:#1c2029; --ink:#e7e9ef; --muted:#9aa2b3; --line:#2d3340; --soft:#242933;
-  --accent:#95a3f2; --in:#62cf93; --out:#f29078; color-scheme:dark } }
+  --accent:#95a3f2; --accent-ink:#10142a; --accent-soft:#242a45; --accent-deep:#c3cbfa;
+  --in:#62cf93; --in-bg:#163322; --out:#f29078; --out-bg:#3a1f18;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.6); color-scheme:dark } }
 :root[data-theme="dark"]{
   --bg:#13161d; --card:#1c2029; --ink:#e7e9ef; --muted:#9aa2b3; --line:#2d3340; --soft:#242933;
-  --accent:#95a3f2; --in:#62cf93; --out:#f29078; color-scheme:dark }
+  --accent:#95a3f2; --accent-ink:#10142a; --accent-soft:#242a45; --accent-deep:#c3cbfa;
+  --in:#62cf93; --in-bg:#163322; --out:#f29078; --out-bg:#3a1f18;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.6); color-scheme:dark }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;margin:0;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
-.wrap{max-width:560px;margin:0 auto;display:grid;gap:14px}
-header{padding:4px 0 6px}
-.eyebrow{font-size:12px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
-h1{font-family:var(--display);font-size:26px;font-weight:700;margin:4px 0 0;letter-spacing:.02em;text-wrap:balance}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;margin:0;padding-block:0 56px}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--accent)}
+
+nav.top{position:sticky;top:0;z-index:9;background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+nav.top .in{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;height:54px}
+nav.top .brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:17px;white-space:nowrap;color:var(--ink);text-decoration:none}
+nav.top .seal{width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:13px;font-weight:700}
+nav.top .brand small{font-family:var(--body);font-weight:500;font-size:11px;color:var(--muted);letter-spacing:.08em}
+nav.top a.back{color:var(--muted);text-decoration:none;font-size:14px;padding:6px 11px;border-radius:999px;white-space:nowrap}
+nav.top a.back:hover{background:var(--accent-soft);color:var(--accent-deep)}
+nav.top a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.wrap{max-width:640px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:14px;padding-top:22px}
+header.mast{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:0 0 6px}
+.eyebrow{font-size:12px;letter-spacing:.16em;color:var(--accent);font-weight:600;text-transform:uppercase}
+h1{font-family:var(--display);font-size:28px;font-weight:700;margin:2px 0 0;letter-spacing:.02em;line-height:1.2;text-wrap:balance}
 .asof{font-size:13px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
-section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;min-width:0}
-h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600}
+select.month{font:inherit;font-size:14px;font-weight:600;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);min-width:0}
+select.month:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0;box-shadow:var(--shadow)}
+h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .big{font-family:var(--display);font-size:40px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1;letter-spacing:-.01em}
+.big small{font-family:var(--body);font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0;margin-left:6px}
+
+/* ① income / expense */
+.io{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:420px){ .io{grid-template-columns:1fr} }
+.io>div{background:var(--soft);border-radius:11px;padding:12px 14px;min-width:0;display:grid;align-content:start;gap:4px}
+.io .k{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.io .k i{width:7px;height:7px;border-radius:50%;background:var(--in);display:inline-block}
+.io .out .k i{background:var(--out)}
+.io .v{font-family:var(--display);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.io .in .v{color:var(--in)} .io .out .v{color:var(--out)}
+.io .v small{font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);margin-left:4px}
+.io ul{margin:4px 0 0;padding:0;list-style:none;font-size:13px;color:var(--muted);display:grid;gap:2px}
+.io li{display:flex;justify-content:space-between;gap:10px} .io li b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.io li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.donors{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:13.5px;line-height:1.7}
+.donors .lead{color:var(--muted);margin-right:4px}
+.donors .nm{display:inline-block;background:var(--in-bg);color:var(--in);border-radius:999px;padding:1px 10px;margin:2px 4px 2px 0;font-weight:600}
+
+/* ② balance */
 .split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-.split div{background:var(--soft);border-radius:9px;padding:10px 12px;min-width:0}
+.split>div{background:var(--soft);border-radius:9px;padding:10px 12px;min-width:0}
 .split .k{font-size:12px;color:var(--muted)} .split .v{font-weight:600;font-variant-numeric:tabular-nums;font-size:17px;overflow-wrap:anywhere}
 .pl{margin:10px 0 0;padding:0;list-style:none;font-size:13px;color:var(--muted);display:grid;gap:3px}
 .pl li{display:flex;justify-content:space-between;gap:10px} .pl li b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
-.bars{display:grid;gap:7px}
-.bar{display:grid;grid-template-columns:minmax(80px,32%) 1fr auto;gap:8px;align-items:center;font-size:13px}
-.bar .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.bar .lbl small{color:var(--muted)}
-.bar .track{height:10px;background:var(--soft);border-radius:5px;overflow:hidden;position:relative}
-.bar .track b{position:absolute;inset:0 auto 0 0;background:var(--in);border-radius:5px;min-width:2px}
-.bar.out .track b{background:var(--out)}
-.bar .amt{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
-.bar.cur .lbl{font-weight:600}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;float:right}
-.seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:3px 10px;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--soft);color:var(--ink)}
-.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.empty{color:var(--muted);font-size:13px;padding:6px 0}
-footer{font-size:12px;color:var(--muted);line-height:1.6;padding:0 4px}
+
+/* ③ monthly table */
+.tbl{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.tbl th{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl tr.cur td{font-weight:600}
+.tbl td.i{color:var(--in)} .tbl td.o{color:var(--out)}
+.tbl tfoot td{border-bottom:0;color:var(--muted);font-size:13px;padding-top:10px}
+.twrap{overflow-x:auto;margin:0 -4px}
+
+.empty{color:var(--muted);font-size:13.5px;padding:6px 0}
+footer{font-size:12.5px;color:var(--muted);line-height:1.65;padding:0 4px}
 .pay{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}
 .pay img{width:150px;height:auto;border-radius:10px;border:1px solid var(--line);background:#fff}
 .pay .h{font-family:var(--display);font-size:17px;font-weight:700}
@@ -62,13 +102,17 @@ footer{font-size:12px;color:var(--muted);line-height:1.6;padding:0 4px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="eyebrow">MindfulPeace · 栖心一班</div>
-    <h1>班费公示</h1>
-    <div class="asof" id="asof">读取中…</div>
+<nav class="top gutter"><div class="in">
+  <a class="brand" href="./"><span class="seal">栖</span>栖心一班<small>班费公示</small></a>
+  <a class="back" href="./">班级看板 ›</a>
+</div></nav>
+
+<div class="wrap gutter">
+  <header class="mast">
+    <div><div class="eyebrow">MindfulPeace · 静心学堂</div><h1 id="title">班费公示</h1><div class="asof" id="asof">读取中…</div></div>
+    <select class="month" id="month" aria-label="选择月份" hidden></select>
   </header>
-  <main id="app"><section><div class="empty">正在读取最近一期公示…</div></section></main>
+  <main id="app" style="display:contents"><section><div class="empty">正在读取最近一期公示…</div></section></main>
   <section id="pay" hidden><h2>缴纳班费</h2><div class="pay"><img id="qrImg" alt="班费收款码"><div><div class="h" id="qrName"></div><div class="acct"><span id="qrHandle"></span><button type="button" id="qrCopy">复制账号</button></div><div class="tip">Venmo 扫码或搜索账号转账，备注写<b>法名 + 班费</b>；指定用途的供养请在备注里写明用途。</div></div></div></section>
   <footer>班费收入分两类：<b>随喜供养</b>（非限定用途）与<b>专项供养</b>（指定用途，专款专用）。本页只公示汇总数字；明细与凭证由记账义工保管，有疑问请联系班委。</footer>
 </div>
@@ -82,38 +126,58 @@ const fmt = n => (n < 0 ? '-' : '') + '$' + Math.abs(+n || 0).toLocaleString('en
 const md = s => { const [, m, d] = String(s).split('-'); return (+m || 0) + '/' + (+d || 0); };
 const ym = s => { const [y, m] = String(s).split('-'); return (+y || 0) + '年' + (+m || 0) + '月'; };
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-let data = null, range = 'month';
+const cache = {}; let months = [], data = null;
 
-function bars(items, key, lblFn, cls, curIdx) {
-  if (!items || !items.length) return '<div class="empty">暂无记录。</div>';
-  const max = Math.max(1, ...items.map(x => +x[key] || 0));
-  return '<div class="bars">' + items.map((x, i) => `<div class="bar ${cls} ${i === curIdx ? 'cur' : ''}"><span class="lbl">${lblFn(x, i)}</span><span class="track"><b style="width:${(+x[key] || 0) / max * 100}%"></b></span><span class="amt">${fmt(x[key])}</span></div>`).join('') + '</div>';
-}
 function render() {
-  if (!data) { $('asof').textContent = '尚未发布数据'; $('app').innerHTML = '<section><div class="empty">记账义工发布第一期公示后，这里会显示结余与收支汇总。</div></section>'; return; }
-  const pubAt = data.publishedAt ? new Date(data.publishedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-  $('asof').textContent = '截至 ' + String(data.asOf || '').slice(0, 10) + ' · 单位 ' + (data.currency || 'USD') + (pubAt ? ' · 发布于 ' + pubAt : '');
-  const restricted = data.restricted || [], rBal = restricted.reduce((a, p) => a + (+p.balance || 0), 0);
-  const weekly = [...(data.weekly || [])].reverse(), monthly = [...(data.monthly || [])].reverse();
-  const cats = range === 'month' ? data.expenseMonth : data.expenseAll;
+  if (!data) { $('asof').textContent = '尚未发布'; $('app').innerHTML = '<section><div class="empty">记账义工发布第一期公示后，这里会显示收支汇总与结余。</div></section>'; return; }
+  const r = data, M = r.current ? '本月' : (+r.month.slice(5)) + '月';
+  const pubAt = r.publishedAt ? new Date(r.publishedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  $('title').textContent = '班费公示 · ' + ym(r.month);
+  $('asof').textContent = '截至 ' + md(r.asOf) + (r.current ? '' : '（月末）') + (pubAt ? ' · 发布于 ' + pubAt : '');
+  const inLines = r.nIn ? [`<li><span>随喜供养</span><b>${fmt(r.inFree)}</b></li>`].concat((r.inRestricted || []).map(p => `<li><span>专项·${esc(p.purpose)}</span><b>${fmt(p.amount)}</b></li>`)) : [];
+  const outLines = (r.expense || []).map(c => `<li><span>${esc(c.category)}</span><b>${fmt(c.amount)}</b></li>`);
+  const restricted = r.restricted || [], rBal = restricted.reduce((a, p) => a + (+p.balance || 0), 0);
+  let run = 0; const asc = [...(r.monthly || [])].sort((a, b) => a.month < b.month ? -1 : 1).map(m => ({ ...m, bal: (run += (+m.in || 0) - (+m.out || 0)) }));
+  const rows = asc.reverse();
   $('app').innerHTML = `
-    <section><h2>当前结余</h2><div class="big">${fmt(data.balance)}</div>
-      <div class="split"><div><div class="k">随喜供养（非限定）</div><div class="v">${fmt(data.unrestricted)}</div></div><div><div class="k">专项供养（指定用途）</div><div class="v">${fmt(rBal)}</div></div></div>
+    <section><h2>${M}收支</h2>
+      <div class="io">
+        <div class="in"><div class="k"><i></i>收入${r.nIn ? ` · ${r.nIn} 笔` : ''}</div><div class="v">${fmt(r.monthIn)}</div>${inLines.length ? '<ul>' + inLines.join('') + '</ul>' : ''}</div>
+        <div class="out"><div class="k"><i></i>支出${r.nOut ? ` · ${r.nOut} 笔` : ''}</div><div class="v">${fmt(r.monthOut)}</div>${outLines.length ? '<ul>' + outLines.join('') + '</ul>' : ''}</div>
+      </div>
+      ${(r.donors || []).length ? `<div class="donors"><span class="lead">随喜以下师兄${M}的供养</span><br>${r.donors.map(n => `<span class="nm">${esc(n)}</span>`).join('')}</div>` : ''}
+    </section>
+    <section><h2>${r.current ? '当前' : '月末'}结余</h2><div class="big">${fmt(r.balance)}</div>
+      <div class="split"><div><div class="k">随喜供养（非限定）</div><div class="v">${fmt(r.unrestricted)}</div></div><div><div class="k">专项供养（指定用途）</div><div class="v">${fmt(rBal)}</div></div></div>
       ${restricted.length ? '<ul class="pl">' + restricted.map(p => `<li><span>${esc(p.purpose)}</span><b>${fmt(p.balance)}</b></li>`).join('') + '</ul>' : ''}
     </section>
-    <section><h2>每周收入 · 近 8 周</h2>${bars(weekly, 'in', (w, i) => `${md(w.start)}–${md(w.end)}${i === weekly.length - 1 ? ' <small>本周</small>' : ''}`, '', weekly.length - 1)}</section>
-    <section><h2>每月收入 · 近 ${monthly.length || 6} 个月</h2>${bars(monthly, 'in', m => ym(m.month), '', monthly.length - 1)}</section>
-    <section><h2>支出分类 <span class="seg"><button type="button" id="segM" aria-pressed="${range === 'month'}">本月</button><button type="button" id="segA" aria-pressed="${range === 'all'}">累计</button></span></h2>${bars(cats, 'amount', c => esc(c.category), 'out', -1)}</section>`;
-  $('segM').addEventListener('click', () => { range = 'month'; render(); });
-  $('segA').addEventListener('click', () => { range = 'all'; render(); });
+    <section><h2>每月收支</h2>
+      ${rows.length ? `<div class="twrap"><table class="tbl"><thead><tr><th>月份</th><th>收入</th><th>支出</th><th>月末结余</th></tr></thead><tbody>${rows.map(m => `<tr class="${m.month === r.month ? 'cur' : ''}"><td>${ym(m.month)}</td><td class="i">${fmt(m.in)}</td><td class="o">${fmt(m.out)}</td><td>${fmt(m.bal)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="4">累计收入 ${fmt(r.totalIn)} · 累计支出 ${fmt(r.totalOut)} · 共 ${r.count} 笔</td></tr></tfoot></table></div>` : '<div class="empty">暂无记录。</div>'}
+    </section>`;
 }
+function fillMonths() {
+  const sel = $('month'), cur = new Date().toISOString().slice(0, 7);
+  sel.innerHTML = months.map(m => `<option value="${esc(m)}">${ym(m)}${m === cur ? '（本月）' : ''}</option>`).join('');
+  if (data) sel.value = data.month;
+  sel.hidden = months.length < 2;
+}
+async function show(month) {
+  if (cache[month]) { data = cache[month]; render(); return; }
+  $('asof').textContent = '读取中…';
+  const r = await QX.api('summary', { month });
+  if (r && r.ok && r.summary) { cache[r.summary.month] = r.summary; data = r.summary; months = r.months || months; fillMonths(); }
+  render();
+}
+$('month').addEventListener('change', () => show($('month').value).catch(() => { $('asof').textContent = '读取失败'; }));
+
 if (!API) { $('asof').textContent = '未配置后端'; $('app').innerHTML = '<section><div class="empty">还没有配置后端地址，请先按 scripts/banfei/README.md 部署。</div></section>'; return; }
 QX.ready().then(() => {
   QX.api('qr').then(r => { if (!(r && r.ok && r.dataUrl)) return; $('qrImg').src = r.dataUrl; $('qrName').textContent = r.name || ''; $('qrHandle').textContent = r.handle || ''; $('pay').hidden = false;
     $('qrCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(r.handle || ''); $('qrCopy').textContent = '已复制'; setTimeout(() => $('qrCopy').textContent = '复制账号', 1800); } catch (_) {} });
   }).catch(() => {});
   return QX.api('summary');
-}).then(r => { data = r && r.ok ? r.summary : null; render(); })
+}).then(r => { data = r && r.ok ? r.summary : null; months = (r && r.months) || []; if (data) cache[data.month] = data; fillMonths(); render(); })
   .catch(() => { $('asof').textContent = '读取失败'; $('app').innerHTML = '<section><div class="empty">暂时读不到数据，请稍后刷新。</div></section>'; });
 })();
 </script>

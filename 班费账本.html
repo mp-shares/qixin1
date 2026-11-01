@@ -257,7 +257,7 @@ input,select,textarea{font:inherit;font-size:16px;padding:9px 10px;border:1px so
         <button class="btn primary" id="publishBtn">发布到公示页</button>
         <button class="btn" id="copyText">复制公示文本</button>
       </div>
-      <div class="hint">「发布到公示页」把当前汇总数字（不含明细和凭证）推到公开的 班费公示 页，全班打开即见；记账时勾选「同步公示」会自动发布，一般不用手动点。「复制公示文本」贴到班级群，建议每月一次；右上角可切换月份，回看或补发往月公示。</div>
+      <div class="hint">「发布到公示页」把所选月份和当月的汇总（不含明细和凭证）推到公开的 班费公示 页，全班打开即见，往月也能在那里回看；记账时勾选「同步公示」会自动发布，一般不用手动点。「复制公示文本」贴到班级群，建议每月一次。</div>
     </section>
   </div>
   </div>
@@ -376,7 +376,6 @@ function compute() {
     expenseMonth: byCat(entries.filter(e => e.date.startsWith(thisMonth))), expenseAll: byCat(entries),
   };
 }
-const pubPayload = s => ({ class: '栖心一班', asOf: s.asOf, currency: s.currency, balance: s.balance, unrestricted: s.unrestricted, restricted: s.restricted.map(p => ({ purpose: p.purpose, balance: p.balance })), thisWeek: { start: s.thisWeek.start, end: s.thisWeek.end, in: s.thisWeek.in }, monthIn: s.monthIn, monthOut: s.monthOut, weekly: s.weekly.map(w => ({ start: w.start, end: w.end, in: w.in })), monthly: s.monthly.slice(0, 6).map(m => ({ month: m.month, in: m.in })), expenseMonth: s.expenseMonth, expenseAll: s.expenseAll });
 const recent = () => [...entries].sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')));
 const purposes = () => [...new Set(recent().map(e => e.purpose).filter(Boolean))];
 // 三类可选标签都只来自现有记录：某个值没有任何记录再用，标签自然消失
@@ -436,44 +435,55 @@ function renderLedger() {
   }).join('');
 }
 
-// 可选月份：当月按今天截止，往月按月末截止，结余也按那时点算，便于回看或补发
-const pubMonths = () => { const ms = new Set(entries.map(e => e.date.slice(0, 7))); ms.add(today().slice(0, 7)); return [...ms].sort().reverse(); };
-function pubText(month) {
-  // 发群用的月度公示：当月收支 → 结余 → 累计，一屏读完
-  const m = month || today().slice(0, 7), cur = m === today().slice(0, 7);
+// 公示按月：当月按今天截止，往月按月末截止，结余也按那时点算；整份报告发布到公示页，往月可回看
+const curMonth = () => today().slice(0, 7);
+const pubMonths = () => { const ms = new Set(entries.map(e => e.date.slice(0, 7))); ms.add(curMonth()); return [...ms].sort().reverse(); };
+function monthReport(month) {
+  const m = month || curMonth(), current = m === curMonth();
   const [y, mo] = m.split('-').map(Number), lastDay = new Date(y, mo, 0).getDate();
-  const asOf = cur ? today() : m + '-' + pad(lastDay);
+  const asOf = current ? today() : m + '-' + pad(lastDay);
   const upTo = entries.filter(e => e.date <= asOf), me = upTo.filter(e => e.date.startsWith(m));
-  const amt = e => +e.amount || 0, sumK = (list, k) => list.reduce((a, e) => a + (e.kind === k ? amt(e) : 0), 0);
-  const totalIn = sumK(upTo, 'in'), totalOut = sumK(upTo, 'out'), monthIn = sumK(me, 'in'), monthOut = sumK(me, 'out');
+  const amt = e => +e.amount || 0, r2 = n => +n.toFixed(2), sumK = (list, k) => list.reduce((a, e) => a + (e.kind === k ? amt(e) : 0), 0);
+  const totalIn = sumK(upTo, 'in'), totalOut = sumK(upTo, 'out');
   const pm = {}; upTo.forEach(e => { if (e.purpose) { const p = pm[e.purpose] || (pm[e.purpose] = { purpose: e.purpose, in: 0, out: 0 }); p[e.kind] += amt(e); } });
-  const restricted = Object.values(pm).map(p => ({ ...p, balance: +(p.in - p.out).toFixed(2) })).sort((a, b) => b.balance - a.balance);
+  const restricted = Object.values(pm).map(p => ({ purpose: p.purpose, balance: r2(p.in - p.out) })).sort((a, b) => b.balance - a.balance);
   const rBal = restricted.reduce((a, p) => a + p.balance, 0);
   const cats = {}; me.forEach(e => { if (e.kind === 'out') { const k = e.category || '未分类'; cats[k] = (cats[k] || 0) + amt(e); } });
-  const expense = Object.entries(cats).map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount);
-  const mFree = me.reduce((a, e) => a + (e.kind === 'in' && e.category === '随喜供养' ? amt(e) : 0), 0);
-  const mRes = {}; me.forEach(e => { if (e.kind === 'in' && e.category === '专项供养') mRes[e.purpose] = (mRes[e.purpose] || 0) + amt(e); });
-  const nIn = me.filter(e => e.kind === 'in').length, nOut = me.filter(e => e.kind === 'out').length;
-  const M = cur ? '本月' : mo + '月';
+  const mRes = {}; me.forEach(e => { if (e.kind === 'in' && e.category === '专项供养') { const k = e.purpose || '未注明'; mRes[k] = (mRes[k] || 0) + amt(e); } });
+  const mm = {}; upTo.forEach(e => { const k = e.date.slice(0, 7); const x = mm[k] || (mm[k] = { month: k, in: 0, out: 0, n: 0 }); x[e.kind] += amt(e); x.n++; });
+  return {
+    month: m, asOf, current,
+    monthIn: r2(sumK(me, 'in')), monthOut: r2(sumK(me, 'out')), nIn: me.filter(e => e.kind === 'in').length, nOut: me.filter(e => e.kind === 'out').length,
+    inFree: r2(me.reduce((a, e) => a + (e.kind === 'in' && e.category === '随喜供养' ? amt(e) : 0), 0)),
+    inRestricted: Object.entries(mRes).map(([purpose, amount]) => ({ purpose, amount: r2(amount) })),
+    expense: Object.entries(cats).map(([category, amount]) => ({ category, amount: r2(amount) })).sort((a, b) => b.amount - a.amount),
+    donors: [...new Set(me.filter(e => e.kind === 'in' && e.who).map(e => e.who.trim()).filter(Boolean))],
+    balance: r2(totalIn - totalOut), unrestricted: r2(totalIn - totalOut - rBal), restricted,
+    totalIn: r2(totalIn), totalOut: r2(totalOut), count: upTo.length,
+    monthly: Object.values(mm).sort((a, b) => a.month < b.month ? 1 : -1).map(x => ({ month: x.month, in: r2(x.in), out: r2(x.out), n: x.n })),
+  };
+}
+function pubText(month) {
+  // 发群用的月度公示：当月收支 → 结余 → 累计，一屏读完
+  const r = monthReport(month), M = r.current ? '本月' : +r.month.slice(5) + '月';
   const L = [];
-  L.push(`【栖心一班 班费公示】${ym(m)}`);
-  L.push(`截至 ${md(asOf)}`);
+  L.push(`【栖心一班 班费公示】${ym(r.month)}`);
+  L.push(`截至 ${md(r.asOf)}`);
   L.push('');
-  L.push(`${M}收入 ${fmt(monthIn)}${nIn ? `（${nIn} 笔）` : ''}`);
-  if (nIn) {
-    L.push(`　随喜供养 ${fmt(mFree)}`);
-    Object.entries(mRes).forEach(([p, v]) => L.push(`　专项供养·${p} ${fmt(v)}`));
+  L.push(`${M}收入 ${fmt(r.monthIn)}${r.nIn ? `（${r.nIn} 笔）` : ''}`);
+  if (r.nIn) {
+    L.push(`　随喜供养 ${fmt(r.inFree)}`);
+    r.inRestricted.forEach(p => L.push(`　专项供养·${p.purpose} ${fmt(p.amount)}`));
   }
-  L.push(`${M}支出 ${fmt(monthOut)}${nOut ? `（${nOut} 笔）` : ''}`);
-  expense.forEach(c => L.push(`　${c.category} ${fmt(c.amount)}`));
-  const donors = [...new Set(me.filter(e => e.kind === 'in' && e.who).map(e => e.who.trim()).filter(Boolean))];
-  if (donors.length) { L.push(''); L.push(`随喜以下师兄${M}的供养：${donors.join('、')}`); }
+  L.push(`${M}支出 ${fmt(r.monthOut)}${r.nOut ? `（${r.nOut} 笔）` : ''}`);
+  r.expense.forEach(c => L.push(`　${c.category} ${fmt(c.amount)}`));
+  if (r.donors.length) { L.push(''); L.push(`随喜以下师兄${M}的供养：${r.donors.join('、')}`); }
   L.push('');
-  L.push(`${cur ? '当前' : '月末'}结余 ${fmt(totalIn - totalOut)}`);
-  L.push(`　随喜（非限定）${fmt(totalIn - totalOut - rBal)}`);
-  restricted.filter(p => p.balance).forEach(p => L.push(`　专项·${p.purpose} ${fmt(p.balance)}`));
+  L.push(`${r.current ? '当前' : '月末'}结余 ${fmt(r.balance)}`);
+  L.push(`　随喜（非限定）${fmt(r.unrestricted)}`);
+  r.restricted.filter(p => p.balance).forEach(p => L.push(`　专项·${p.purpose} ${fmt(p.balance)}`));
   L.push('');
-  L.push(`累计收入 ${fmt(totalIn)} · 累计支出 ${fmt(totalOut)} · 共 ${upTo.length} 笔`);
+  L.push(`累计收入 ${fmt(r.totalIn)} · 累计支出 ${fmt(r.totalOut)} · 共 ${r.count} 笔`);
   L.push('感恩各位师兄护持 🙏 明细与凭证由记账义工保管，有疑问请联系班委。');
   return L.join('\n');
 }
@@ -495,7 +505,9 @@ async function copy(text, label) {
 $('copyText').addEventListener('click', () => copy(pubText($('pubMonth').value), '公示文本'));
 $('pubMonth').addEventListener('change', () => { $('pubText').textContent = pubText($('pubMonth').value); });
 async function publishNow() {
-  const r = await apiPost({ action: 'publish', key, summary: pubPayload(compute()) }); if (!r.ok) throw fail(r);
+  // 发所选月份 + 当月（当月那份是看板和公示页默认显示的「最新一期」）
+  const sel = $('pubMonth').value, months = [...new Set([sel, curMonth()].filter(Boolean))];
+  const r = await apiPost({ action: 'publish', key, reports: months.map(monthReport) }); if (!r.ok) throw fail(r);
   lastPub = { publishedAt: new Date().toISOString() }; render();
 }
 $('publishBtn').addEventListener('click', async () => {

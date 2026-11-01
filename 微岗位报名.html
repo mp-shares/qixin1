@@ -152,6 +152,9 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
     </div>
   </div>
 
+  <section class="view" id="noticeEd" hidden><div class="cat"><h2><span>看板通知</span><span class="sum">显示在班级看板顶部，留空则不显示</span></h2>
+    <div style="padding:12px 16px;display:grid;gap:8px"><textarea id="noticeText" placeholder="例：本周四晚 8 点线上共修，请提前 5 分钟进会议室。"></textarea>
+    <div class="actions" style="align-items:center"><button type="button" class="btn primary" id="noticeSave">保存通知</button><span class="sum" id="noticeAt" style="font-size:13px;color:var(--fg-2)"></span></div></div></div></section>
   <section class="view" id="view-roles"></section>
   <section class="view" id="view-people" hidden></section>
   <section class="view" id="view-time" hidden></section>
@@ -321,9 +324,19 @@ function openEditor(id) {
   $('dlg').showModal();
   if (!ro) $('fName').focus();
 }
+// 看板通知（公开表「通知」）：班委口令可改，看板顶部显示
+function noticeAt(at) { const d = at ? new Date(at) : null; $('noticeAt').textContent = d && !isNaN(d) ? '上次更新 ' + (d.getMonth() + 1) + '/' + d.getDate() : ''; }
+async function loadNotice() { try { const r = await apiPost({ action: 'notice', key: mkey }); if (r && r.ok) { $('noticeText').value = r.text || ''; noticeAt(r.updatedAt); } } catch (_) {} }
+$('noticeSave').addEventListener('click', async () => {
+  const b = $('noticeSave'); b.disabled = true;
+  try { const r = await apiPost({ action: 'set_notice', key: mkey, text: $('noticeText').value }); if (!r.ok) throw new Error(r.error || '保存失败'); $('noticeText').value = r.text || ''; noticeAt(r.updatedAt); toast(r.text ? '通知已更新，看板刷新即见' : '通知已清空'); }
+  catch (e) { toast('保存失败：' + e.message); }
+  finally { b.disabled = false; }
+});
 function setMode(on) {
   manage = on;
   $('manageBtn').hidden = on; $('exitBtn').hidden = !on; $('copyBtn').hidden = !on; $('addBtn').hidden = !on;
+  $('noticeEd').hidden = !on; if (on) loadNotice();
   $('tab-people').hidden = !on;
   if (!on && view === 'people') document.getElementById('tab-roles').click();
   render();

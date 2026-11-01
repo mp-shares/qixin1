@@ -7,7 +7,7 @@
 <title>栖心一班班级看板</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* Layout: sticky nav → masthead → four bands: ① 活动照片（snap carousel, auto-advance, caption over image）② 班级公示（static stat cards, balance card tinted）③ 项目入口（monogram cards）④ 义工操作区（tinted restricted band）. Content lives in SLIDES_STATIC / PROJECTS / STAFF at the top of the script. */
+/* Layout: sticky nav → masthead → 通知栏（班委在微岗位管理页改，留空不显示）→ ① 活动照片（snap carousel；没照片时一张封面）② 班级公示（班费一卡 + 微岗位一卡）③ 全班入口 / 义工入口. Content lives in PROJECTS / STAFF at the top of the script. */
 :root{
   --bg:#f4f5f8; --card:#ffffff; --ink:#1b2130; --muted:#6b7386; --line:#e0e4ec; --soft:#eef0f5;
   --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
@@ -61,6 +61,13 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .band>h2 small{font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.06em;margin-left:auto}
 .band.staff>h2::before{background:var(--lock)}
 
+/* 通知栏 */
+.notice{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:start;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:14px;padding:14px 18px;box-shadow:var(--shadow);min-width:0}
+.notice .nk{font-size:12px;letter-spacing:.12em;color:var(--accent);font-weight:700;padding-top:3px;white-space:nowrap}
+.notice p{margin:0;font-size:15.5px;line-height:1.65;min-width:0;overflow-wrap:anywhere}
+.notice small{grid-column:2;font-size:12px;color:var(--muted)}
+@media (max-width:440px){ .notice{grid-template-columns:1fr} .notice small{grid-column:1} }
+
 /* ① carousel */
 .carousel{position:relative;min-width:0;max-width:100%}
 .track{display:flex;gap:12px;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:2px;-webkit-overflow-scrolling:touch}
@@ -76,6 +83,10 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .slide.photo .cap a{color:#fff;font-size:12.5px;white-space:nowrap;text-decoration:none;opacity:.9;border:1px solid rgba(255,255,255,.5);border-radius:999px;padding:3px 10px}
 .slide.photo .cap a:hover{background:rgba(255,255,255,.15)}
 @media (max-width:520px){ .slide.photo img{height:230px} .slide.photo .cap{padding:28px 14px 12px} }
+.slide.cover{background:linear-gradient(135deg,var(--accent-soft),var(--card) 70%);min-height:200px;align-content:center;text-align:center;gap:8px}
+.slide.cover .k{color:var(--accent)}
+.slide.cover .t{font-size:30px;letter-spacing:.06em}
+.slide.cover .d{font-size:14px}
 .dots{display:flex;justify-content:center;gap:6px;margin-top:10px}
 .dots button{width:7px;height:7px;border-radius:50%;border:0;background:var(--line);padding:0;cursor:pointer;transition:width .2s,background .2s}
 .dots button[aria-current="true"]{background:var(--accent);width:20px;border-radius:4px}
@@ -84,7 +95,18 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* ② stat cards */
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:stretch}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:grid;align-content:start;gap:6px;min-width:0;box-shadow:var(--shadow)}
-.stat.hero{grid-column:1/-1;background:linear-gradient(135deg,var(--accent-soft),var(--card) 60%)}
+.stat.hero{background:linear-gradient(135deg,var(--accent-soft),var(--card) 60%)}
+@media (min-width:560px){ .stats{grid-template-columns:3fr 2fr} }
+.stat .io{display:flex;gap:16px;flex-wrap:wrap;margin-top:4px;font-size:13px;color:var(--muted)}
+.stat .io b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;margin-left:4px}
+.stat .io b.in{color:var(--in)} .stat .io b.out{color:var(--out)}
+.stat .names{font-size:13px;color:var(--muted);line-height:1.8;margin-top:2px}
+.stat .names span{display:inline-block;background:var(--in-bg);color:var(--in);border-radius:999px;padding:0 9px;margin:0 4px 0 0;font-weight:600;font-size:12.5px}
+.stat .links{font-size:13px;margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}
+.stat .links a{text-decoration:none;font-weight:600}
+.stat .links a:hover{text-decoration:underline}
+.stat .gap{font-size:13px;color:var(--muted);line-height:1.6}
+.stat .gap b{color:var(--ink);font-weight:600}
 .stat .k{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
 .stat .k i{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}
 .stat .k i.in{background:var(--in)} .stat .k i.out{background:var(--out)}
@@ -126,8 +148,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     <ul>
       <li><a class="nl" href="#photos" data-nav="photos">照片</a></li>
       <li><a class="nl" href="#show" data-nav="show">公示</a></li>
-      <li><a class="nl" href="#projects" data-nav="projects">项目</a></li>
-      <li><a class="nl" href="#staff" data-nav="staff">义工区</a></li>
+      <li><a class="nl" href="#links" data-nav="links">入口</a></li>
     </ul>
   </div>
 </nav>
@@ -138,7 +159,9 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     <div class="date" id="today"></div>
   </header>
 
-  <section class="band" id="photos" hidden>
+  <div class="notice" id="notice" hidden><span class="nk">通知</span><p id="noticeText"></p><small id="noticeAt"></small></div>
+
+  <section class="band" id="photos">
     <h2>活动照片</h2>
     <div class="carousel">
       <div class="track" id="track" aria-live="polite"></div>
@@ -151,13 +174,13 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     <div class="stats" id="stats"></div>
   </section>
 
-  <div class="two-up">
+  <div class="two-up" id="links">
     <section class="band" id="projects">
-      <h2>项目入口</h2>
+      <h2>全班入口</h2>
       <div class="list" id="projectCards"></div>
     </section>
     <section class="band staff" id="staff">
-      <h2>义工操作区 <small>凭口令进入</small></h2>
+      <h2>义工入口 <small>凭口令进入</small></h2>
       <div class="list" id="staffCards"></div>
     </section>
   </div>
@@ -168,28 +191,30 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
 <script src="gate.js"></script>
 <script>
 (function () {
-  /* 内容配置（维护者看，不显示）：SLIDES_STATIC 固定轮播页 {k,t,d}；PROJECTS 项目卡 {mg 单字标记,t,d,url}；STAFF 义工区 {mg,t,d,url,who,key}。
-     （mg 字段保留备用，当前列表样式不显示。）轮播照片：Drive「DC1班活动图片归档/看板轮播」有图优先，否则自动取最新活动的精选或最新几张。公示更新：账本「公示」页点「发布到公示页」。 */
-  var SLIDES_STATIC = []; // 需要固定通知页时在这里加 { k, t, d }
+  /* 内容配置（维护者看，不显示）：PROJECTS 全班入口 {t,d,url}；STAFF 义工入口 {t,d,url,who,key}。
+     轮播照片：Drive「DC1班活动图片归档/看板轮播」有图优先，否则自动取最新活动的精选或最新几张；都没有就显示封面。
+     通知栏：公开表「通知」，班委在 微岗位报名.html#manage 顶部修改。公示数字：账本「公示」页发布（记账时勾选同步会自动发）。 */
   var PROJECTS = [
-    { mg: '费', t: '班费公示', d: '结余、每周每月收入、支出分类汇总。', url: '班费公示.html' },
-    { mg: '岗', t: '微岗位认领', d: '20 个微岗位谁在承担，各组修时间谁方便。', url: '微岗位报名.html' },
-    { mg: '影', t: '活动照片', d: '班级活动相册，按活动分文件夹。', url: 'https://drive.google.com/drive/folders/1VyvDqOVdxgjbgbljwmcKTbEDVvTFg0DP' }
+    { t: '班费公示', d: '每月收支、供养名单、结余，往月可回看。', url: '班费公示.html' },
+    { t: '微岗位认领', d: '20 个微岗位谁在承担，各组修时间谁方便。', url: '微岗位报名.html' },
+    { t: '活动照片', d: '班级活动相册，按活动分文件夹。', url: 'https://drive.google.com/drive/folders/1VyvDqOVdxgjbgbljwmcKTbEDVvTFg0DP' }
   ];
   var STAFF = [
-    { mg: '账', t: '班费账本', d: '录入收支与凭证，发布公示。', url: '班费账本.html', who: '记账义工', key: '记账口令' },
-    { mg: '编', t: '微岗位报名管理', d: '添加、修改同学的报名，看备注，复制统计。', url: '微岗位报名.html#manage', who: '班委', key: '班委口令' }
+    { t: '班费账本', d: '录入收支与凭证，发布公示。', url: '班费账本.html', who: '记账义工', key: '记账口令' },
+    { t: '微岗位报名管理', d: '改看板通知；添加、修改同学的报名，复制统计。', url: '微岗位报名.html#manage', who: '班委', key: '班委口令' }
   ];
+  var TOTAL_ROLES = 20;
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var fmt = function (n) { return (n < 0 ? '-' : '') + '$' + Math.abs(+n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
   var md = function (s) { var a = String(s).split('-'); return (+a[1] || 0) + '/' + (+a[2] || 0); };
   var API = (window.BANFEI_API || '').trim();
-  var now = new Date();
-  $('today').textContent = now.getFullYear() + ' 年 ' + (now.getMonth() + 1) + ' 月 ' + now.getDate() + ' 日 · ' + ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][now.getDay()];
+  var now = new Date(), WD = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  var dateStr = now.getFullYear() + ' 年 ' + (now.getMonth() + 1) + ' 月 ' + now.getDate() + ' 日 · ' + WD[now.getDay()];
+  $('today').textContent = dateStr;
 
-  // ③ ④
+  // ③ 入口
   var card = function (p, lock) {
     var ext = /^https?:/.test(p.url);
     var tag = lock ? '<span class="tag">' + esc(p.who) + ' · ' + esc(p.key) + '</span>' : '';
@@ -198,6 +223,16 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   $('projectCards').innerHTML = PROJECTS.map(function (p) { return card(p, false); }).join('');
   $('staffCards').innerHTML = STAFF.map(function (p) { return card(p, true); }).join('');
 
+  // 通知栏
+  function renderNotice(n) {
+    var text = n && n.text ? String(n.text).trim() : '';
+    $('notice').hidden = !text;
+    if (!text) return;
+    $('noticeText').innerHTML = esc(text).replace(/\n/g, '<br>');
+    var at = n.updatedAt ? new Date(n.updatedAt) : null;
+    $('noticeAt').textContent = at && !isNaN(at) ? '更新于 ' + (at.getMonth() + 1) + '/' + at.getDate() : '';
+  }
+
   // ① 照片轮播
   var fee = null, signups = null, photos = [];
   var PHOTO_ALBUM = 'https://drive.google.com/drive/folders/1VyvDqOVdxgjbgbljwmcKTbEDVvTFg0DP';
@@ -205,37 +240,36 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     var src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(p.id) + '&sz=w1000';
     return '<div class="slide photo"><img data-src="' + src + '" alt="' + esc(p.name) + '"><div class="cap"><b>' + esc(p.name) + '</b><a href="' + PHOTO_ALBUM + '" target="_blank" rel="noopener">更多照片 ↗</a></div></div>';
   }
-  function slides() {
-    var out = SLIDES_STATIC.map(function (s) { return '<div class="slide"><div class="k">' + esc(s.k) + '</div><div class="t">' + esc(s.t) + '</div><div class="d">' + s.d + '</div></div>'; });
-    return out.concat(photos.map(photoSlide));
-  }
+  var COVER = '<div class="slide cover"><div class="k">MindfulPeace · 静心学堂</div><div class="t">栖心一班</div><div class="d">' + esc(dateStr) + '</div></div>';
+  function slides() { return photos.length ? photos.map(photoSlide) : [COVER]; }
 
   // ② 公示卡片
-  function mini(items, key, lblFn, cls) {
-    if (!items || !items.length) return '';
-    var max = Math.max.apply(null, [1].concat(items.map(function (x) { return +x[key] || 0; })));
-    return '<div class="mini">' + items.slice(0, 4).map(function (x, i) { return '<div><span class="lbl">' + lblFn(x, i) + '</span><span class="tr"><b class="' + cls + '" style="width:' + ((+x[key] || 0) / max * 100) + '%"></b></span><span class="amt">' + fmt(x[key]) + '</span></div>'; }).join('') + '</div>';
-  }
   function renderStats() {
     var out = [];
     if (fee) {
       var restricted = fee.restricted || [], rBal = restricted.reduce(function (a, p) { return a + (+p.balance || 0); }, 0);
-      out.push('<div class="stat hero"><div class="k"><i></i>班费 · 当前结余</div><div class="big">' + fmt(fee.balance) + '</div><div class="pl"><span>随喜供养<b>' + fmt(fee.unrestricted) + '</b></span><span>专项供养<b>' + fmt(rBal) + '</b></span>' + restricted.map(function (p) { return '<span>' + esc(p.purpose) + '<b>' + fmt(p.balance) + '</b></span>'; }).join('') + '</div><div class="d">截至 ' + esc(fee.asOf) + ' · <a href="班费公示.html">完整公示 ›</a> · <a href="班费公示.html#pay">缴纳班费 ›</a></div></div>');
-      var weekly = (fee.weekly || []).slice(0, 4);
-      out.push('<div class="stat"><div class="k"><i class="in"></i>本周与本月</div><div class="big in">' + fmt(fee.thisWeek ? fee.thisWeek.in : 0) + '</div><div class="d">本周收入' + (fee.thisWeek ? '（' + md(fee.thisWeek.start) + '–' + md(fee.thisWeek.end) + '）' : '') + '<br>本月收入 <b>' + fmt(fee.monthIn) + '</b> · 本月支出 <b>' + fmt(fee.monthOut) + '</b></div>' + mini(weekly, 'in', function (w, i) { return md(w.start) + '–' + md(w.end) + (i === 0 ? ' 本周' : ''); }, '') + '</div>');
-      if ((fee.expenseAll || []).length) out.push('<div class="stat"><div class="k"><i class="out"></i>支出去向 · 累计</div><div class="big"><small>共 ' + fee.expenseAll.length + ' 类</small></div>' + mini(fee.expenseAll, 'amount', function (c) { return esc(c.category); }, 'o') + '</div>');
+      var donors = fee.donors || [];
+      out.push('<div class="stat hero"><div class="k"><i></i>班费 · 当前结余</div><div class="big">' + fmt(fee.balance) + '</div>' +
+        '<div class="pl"><span>随喜供养<b>' + fmt(fee.unrestricted) + '</b></span><span>专项供养<b>' + fmt(rBal) + '</b></span>' + restricted.map(function (p) { return '<span>' + esc(p.purpose) + '<b>' + fmt(p.balance) + '</b></span>'; }).join('') + '</div>' +
+        '<div class="io"><span>本月收入<b class="in">' + fmt(fee.monthIn) + '</b></span><span>本月支出<b class="out">' + fmt(fee.monthOut) + '</b></span></div>' +
+        (donors.length ? '<div class="names">随喜本月供养 ' + donors.map(function (n) { return '<span>' + esc(n) + '</span>'; }).join('') + '</div>' : '') +
+        '<div class="links"><a href="班费公示.html">完整公示 ›</a><a href="班费公示.html#pay">缴纳班费 ›</a></div>' +
+        '<div class="d">截至 ' + esc(md(fee.asOf)) + '</div></div>');
     } else {
-      out.push('<div class="stat"><div class="k"><i></i>班费 · 当前结余</div><div class="big"><small>待发布</small></div><div class="d">第一期公示发布后，这里显示结余与收支汇总。<br><a href="班费公示.html#pay">缴纳班费 ›</a></div></div>');
+      out.push('<div class="stat hero"><div class="k"><i></i>班费 · 当前结余</div><div class="big"><small>待发布</small></div><div class="d">第一期公示发布后，这里显示结余与收支汇总。</div><div class="links"><a href="班费公示.html#pay">缴纳班费 ›</a></div></div>');
     }
     if (signups) {
       var n = signups.length, roles = {}, cnt = 0;
       signups.forEach(function (p) { (p.roles || []).forEach(function (r) { roles[r] = 1; cnt++; }); });
-      out.push('<div class="stat"><div class="k"><i></i>微岗位认领</div><div class="big">' + n + ' <small>人已认领</small></div><div class="d">覆盖 <b>' + Object.keys(roles).length + '</b> / 20 个岗位，共 <b>' + cnt + '</b> 次认领。<br><a href="微岗位报名.html">看谁在哪个岗 ›</a></div></div>');
+      var covered = Object.keys(roles).length, open = Math.max(0, TOTAL_ROLES - covered);
+      out.push('<div class="stat"><div class="k"><i></i>微岗位认领</div><div class="big">' + n + ' <small>人已认领</small></div>' +
+        '<div class="gap">覆盖 <b>' + covered + '</b> / ' + TOTAL_ROLES + ' 个岗位，共 <b>' + cnt + '</b> 次认领。' + (open ? '<br>还有 <b>' + open + '</b> 个岗位等人承担。' : '<br>所有岗位都有人了 🙏') + '</div>' +
+        '<div class="links"><a href="微岗位报名.html">看谁在哪个岗 ›</a></div></div>');
     }
     $('stats').innerHTML = out.join('');
   }
 
-  // Drive 缩略图一次并发十几张会随机失败：逐张加载，失败重试 3 次，仍失败就撤掉那页
+  // Drive 缩略图一次并发十几张会随机失败：逐张加载，失败重试 3 次，仍失败就撤掉那页；全撤了就回到封面
   var loadToken = 0, idx = 0, timer = null, track = $('track'), dots = $('dots');
   function loadPhotos() {
     var token = ++loadToken, imgs = Array.prototype.slice.call(track.querySelectorAll('img[data-src]'));
@@ -245,20 +279,19 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
       var im = imgs[i], src = im.getAttribute('data-src');
       tryLoad(src, 3).then(function (ok) {
         if (token !== loadToken) return;
-        if (ok) { im.src = src; im.removeAttribute('data-src'); } else { var sl = im.closest('.slide'); if (sl) { sl.remove(); syncDots(); $('photos').hidden = !track.children.length; } }
+        if (ok) { im.src = src; im.removeAttribute('data-src'); } else { var sl = im.closest('.slide'); if (sl) { sl.remove(); if (!track.children.length) { photos = []; renderCarousel(); return; } syncDots(); } }
         next(i + 1);
       });
     })(0);
   }
   function syncDots() {
     var n = track.children.length;
-    dots.innerHTML = Array.apply(null, { length: n }).map(function (_, i) { return '<button type="button" aria-label="第 ' + (i + 1) + ' 张" data-i="' + i + '"></button>'; }).join('');
+    dots.innerHTML = n > 1 ? Array.apply(null, { length: n }).map(function (_, i) { return '<button type="button" aria-label="第 ' + (i + 1) + ' 张" data-i="' + i + '"></button>'; }).join('') : '';
     if (idx >= n) idx = 0;
     Array.prototype.forEach.call(dots.children, function (d, j) { d.setAttribute('aria-current', j === idx ? 'true' : 'false'); });
   }
   function renderCarousel() {
     var html = slides(); track.innerHTML = html.join('');
-    $('photos').hidden = !html.length;
     loadPhotos(); syncDots(); go(Math.min(idx, html.length - 1), true);
   }
   function go(i, silent) {
@@ -271,12 +304,13 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   dots.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { go(+b.dataset.i); restart(); } });
   track.addEventListener('scroll', function () { var w = track.clientWidth + 12; var i = Math.round(track.scrollLeft / w); if (i !== idx && i >= 0 && i < track.children.length) { idx = i; Array.prototype.forEach.call(dots.children, function (d, j) { d.setAttribute('aria-current', j === idx ? 'true' : 'false'); }); } });
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function restart() { clearInterval(timer); if (reduce) return; timer = setInterval(function () { if (document.hidden) return; go(idx + 1); }, 6000); }
+  function restart() { clearInterval(timer); if (reduce) return; timer = setInterval(function () { if (document.hidden || track.children.length < 2) return; go(idx + 1); }, 6000); }
   ['mouseenter', 'touchstart', 'focusin'].forEach(function (ev) { track.addEventListener(ev, function () { clearInterval(timer); }, { passive: true }); });
   ['mouseleave', 'touchend', 'focusout'].forEach(function (ev) { track.addEventListener(ev, restart, { passive: true }); });
   renderCarousel(); renderStats(); restart();
 
   if (API) QX.ready().then(function () {
+    QX.api('notice').then(function (r) { if (r && r.ok) renderNotice(r); }).catch(function () {});
     QX.api('summary').then(function (r) { fee = r && r.ok ? r.summary : null; renderStats(); }).catch(function () {});
     QX.api('signups').then(function (r) { signups = r && r.ok ? r.people : null; renderStats(); }).catch(function () {});
     QX.api('photos').then(function (r) { photos = r && r.ok ? (r.photos || []) : []; renderCarousel(); }).catch(function () {});
@@ -286,7 +320,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   var links = document.querySelectorAll('nav.top a[data-nav]');
   if ('IntersectionObserver' in window) {
     var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) links.forEach(function (a) { a.classList.toggle('on', a.dataset.nav === e.target.id); }); }); }, { rootMargin: '-40% 0px -55% 0px' });
-    ['photos', 'show', 'projects', 'staff'].forEach(function (id) { io.observe($(id)); });
+    ['photos', 'show', 'links'].forEach(function (id) { io.observe($(id)); });
   }
 })();
 </script>
