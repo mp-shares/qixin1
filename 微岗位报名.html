@@ -70,24 +70,30 @@ section.view[hidden] { display: none; }
 .cat { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
 .cat h2 { font-family: var(--display); font-size: 17px; font-weight: 600; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .cat h2 .sum { font-family: var(--body); font-size: 13px; color: var(--fg-2); font-weight: 400; font-variant-numeric: tabular-nums; }
-.role { display: grid; grid-template-columns: 150px 1fr; gap: 6px 16px; padding: 10px 16px; border-top: 1px solid var(--line); align-items: start; }
+.role { display: grid; grid-template-columns: 132px minmax(0,1fr) minmax(0,1fr); gap: 4px 14px; padding: 7px 16px; border-top: 1px solid var(--line); align-items: center; }
+.cat.bw .role { grid-template-columns: 132px minmax(0,1fr); }
+.role.head { padding: 5px 16px; font-size: 11px; color: var(--fg-2); letter-spacing: .06em; background: var(--paper-2); border-top: 0; }
+.role .desc { display: none; }
+.cat.showdesc .role .desc { display: block; grid-column: 1 / -1; margin-top: -2px; }
+.cat h2 .sum button.pill { margin-left: 8px; }
 .eyebrow .backlink { color: var(--accent); text-decoration: none; } .eyebrow .backlink:hover { text-decoration: underline; }
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; min-width: 0; }
-.cols.one { grid-template-columns: 1fr; }
+.cols { display: contents; }
+.col { min-width: 0; }
+.col .cl { display: none; }
 .cat.bw h2 { background: var(--accent-soft); }
 .col .cl { font-size: 11px; color: var(--fg-2); letter-spacing: .06em; margin-bottom: 4px; }
 .chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); cursor: default; }
 .people .link { font: inherit; font-size: 12px; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0 2px; text-decoration: underline; align-self: center; }
 .role:first-of-type { border-top: 0; }
 .role .name { font-weight: 500; display: flex; align-items: baseline; gap: 8px; }
-.role .desc { grid-column: 1 / -1; color: var(--fg-2); font-size: 13px; margin-top: -4px; }
-.count { font-size: 12px; min-width: 22px; text-align: center; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.role .desc { color: var(--fg-2); font-size: 12.5px; }
+.count { font-size: 11px; min-width: 22px; text-align: center; padding: 0 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
 .count.zero { background: var(--warn-soft); color: var(--warn); }
-.people { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
-.chip { font: inherit; font-size: 13px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper-2); color: var(--fg); cursor: pointer; }
+.people { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; align-items: center; }
+.chip { font: inherit; font-size: 12.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper-2); color: var(--fg); cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
 .vacant { font-size: 13px; color: var(--warn); }
-@media (max-width: 560px) { .role { grid-template-columns: 1fr; } .cols { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .role, .cat.bw .role { grid-template-columns: 1fr; gap: 3px; align-items: start; } .role.head { display: none; } .col { display: flex; gap: 8px; align-items: baseline; } .col .cl { display: inline; flex: none; font-size: 11px; color: var(--fg-2); min-width: 3.5em; } }
 
 .tablewrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -114,6 +120,10 @@ input[type="text"], input[type="date"], input[type="number"], select, textarea {
 .pill { font: inherit; font-size: 12px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--fg-2); cursor: pointer; }
 .pill.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
 .cat .tablewrap { border: 0; border-radius: 0; }
+.cat details > summary { cursor: pointer; padding: 10px 16px; font-size: 13px; color: var(--accent); font-weight: 600; list-style: none; display: flex; align-items: center; gap: 6px; }
+.cat details > summary::-webkit-details-marker { display: none; }
+.cat details > summary::before { content: '›'; display: inline-block; transition: transform .15s; font-size: 15px; }
+.cat details[open] > summary::before { transform: rotate(90deg); }
 .cat h2 .sum .btn { font-size: 13px; padding: 4px 10px; margin-left: 8px; }
 textarea { min-height: 64px; resize: vertical; }
 .opts { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -163,7 +173,7 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
   </div>
 
   <section class="view" id="noticeEd" hidden><div class="cat"><h2><span>看板通知 · 置顶</span><span class="sum">显示在看板顶部「通知 · 近期」，到期自动下架<button type="button" class="btn primary" id="ntAdd">＋ 快捷通知</button></span></h2><div id="ntTable"></div></div></section>
-  <section class="view" id="rosterEd" hidden><div class="cat"><h2><span>班级名单</span><span class="sum">报名、定岗都从这里选人<button type="button" class="btn" id="rsAdd">＋ 添加同学</button></span></h2><div id="rsTable"></div></div></section>
+  <section class="view" id="rosterEd" hidden><div class="cat"><h2><span>班级名单</span><span class="sum">报名、定岗都从这里选人<button type="button" class="btn" id="rsAdd">＋ 添加同学</button></span></h2><details id="rsWrap"><summary id="rsSum">展开名单</summary><div id="rsTable"></div></details></div></section>
   <section class="view" id="calEd" hidden><div class="cat"><h2><span>班级日历</span><span class="sum"><button type="button" class="pill on" data-f="event">班级事项</button> <button type="button" class="pill" data-f="birthday">生日</button><button type="button" class="btn" id="calAdd">＋ 添加</button></span></h2><div id="calTable"></div></div></section>
   <section class="view" id="resEd" hidden><div class="cat"><h2><span>班级资料</span><span class="sum">显示在看板「班级资料」<button type="button" class="btn" id="resAdd">＋ 添加</button></span></h2><div id="resTable"></div></div></section>
   <section class="view" id="view-roles"></section>
@@ -197,6 +207,10 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
       <div class="field"><label class="lab" for="rsRole">身份</label><select id="rsRole"><option value="学员">学员</option><option value="辅导团队">辅导团队</option></select></div>
       <div class="field"><label class="lab" for="rsGroup">组别</label><select id="rsGroup"><option value="">不分组</option><option value="1组">1 组</option><option value="2组">2 组</option></select></div>
       <div class="field"><label class="lab" for="rsStatus">状态</label><select id="rsStatus"><option value="在读">在读</option><option value="在任">在任（辅导团队）</option><option value="休学">休学</option><option value="转班">转班</option><option value="退出">退出</option></select></div>
+      <div class="group"><div class="lab">生日（写入班级日历；看板只显示月/日）</div>
+        <div class="field"><input type="date" id="rsBday" aria-label="生日"></div>
+        <div class="opts" style="margin-top:6px"><label class="opt"><input type="checkbox" id="rsNoYear">年份不详</label><label class="opt"><input type="checkbox" id="rsLunar">农历</label><button type="button" class="btn" id="rsBdayClear" style="font-size:12px;padding:4px 10px">清除生日</button></div>
+      </div>
       <div class="field"><label class="lab" for="rsNote">备注（可选，仅班委可见）</label><input type="text" id="rsNote" autocomplete="off"></div>
       <div class="err" id="rsErr" hidden></div>
     </div>
@@ -316,6 +330,7 @@ const MICRO = Object.keys(ROLE).filter(r => !ROLE[r].assignOnly), BW = Object.ke
 const TOTAL_ROLES = MICRO.length;
 
 const API = (window.BANFEI_API || '').trim();
+const showDesc = new Set();
 let people = [], assigned = {}, roster = [], rsEditing = null, assigningRole = null, editingId = null, view = 'roles', manage = false, mkey = '';
 // 名单：报名和定岗都从这里选人；转班/退出的不出现在选择里
 const rosterById = id => roster.find(x => x.id === id);
@@ -351,16 +366,18 @@ function render() {
   $('view-roles').innerHTML = CATS.map(c => {
     const catAssigned = c.roles.filter(([id]) => assignedOf(id).length).length;
     const sum = c.assignOnly ? `${catAssigned} / ${c.roles.length} 岗已定` : `${catAssigned} / ${c.roles.length} 岗已定 · ${c.roles.reduce((n, [id]) => n + byRole[id].length, 0)} 人次有意愿`;
-    return `<div class="cat${c.assignOnly ? ' bw' : ''}"><h2><span>${c.name}</span><span class="sum">${sum}</span></h2>` +
+    const head = c.assignOnly ? '<div class="role head"><span>岗位</span><span>承担人</span></div>' : '<div class="role head"><span>岗位</span><span>定岗</span><span>报名意愿</span></div>';
+    return `<div class="cat${c.assignOnly ? ' bw' : ''}" data-cat="${c.id}"><h2><span>${c.name}</span><span class="sum">${sum}<button type="button" class="pill" data-desc="${c.id}">职责</button></span></h2>` + head +
       c.roles.map(([id, name, desc]) => {
         const list = byRole[id], asg = assignedOf(id);
         const asgCol = `<div class="col"><div class="cl">${c.assignOnly ? '承担人' : '定岗'}</div><div class="people">${asg.map(n => `<span class="chip on">${esc(n)}</span>`).join('') || '<span class="vacant">待定</span>'}${manage ? `<button class="link" data-assign="${id}">编辑</button>` : ''}</div></div>`;
         const willCol = c.assignOnly ? '' : `<div class="col"><div class="cl">报名意愿 · ${list.length}</div><div class="people">${list.length ? list.map(p => chip(p)).join('') : '<span class="vacant">暂无</span>'}</div></div>`;
-        return `<div class="role"><div class="name"><span>${name}</span><span class="count ${asg.length ? '' : 'zero'}">${asg.length ? '已定' : '待定'}</span></div>` +
-          `<div class="cols${c.assignOnly ? ' one' : ''}">${asgCol}${willCol}</div>` +
+        return `<div class="role"><div class="name" title="${esc(desc)}"><span>${name}</span><span class="count ${asg.length ? '' : 'zero'}">${asg.length ? '已定' : '待定'}</span></div>` +
+          `<div class="cols">${asgCol}${willCol}</div>` +
           `<div class="desc">${desc}</div></div>`;
       }).join('') + '</div>';
   }).join('');
+  document.querySelectorAll('#view-roles .cat').forEach(el => el.classList.toggle('showdesc', showDesc.has(el.dataset.cat)));
 
   // 按人员（仅班委管理模式，含备注）
   if (!manage) { $('view-people').innerHTML = ''; } else if (!ps.length) {
@@ -395,7 +412,7 @@ try { const v = localStorage.getItem('wgw-view'); if (v && v !== 'time') documen
 let calItems = [], calF = 'event', calEditing = null, resItems = [], resEditing = null;
 const WDN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const REP = { none: '一次', yearly: '每年', weekly: '每周' };
-async function loadCal() { try { const r = await apiPost({ action: 'calendar', key: mkey }); calItems = r && r.ok ? (r.items || []) : []; } catch (_) { calItems = []; } renderCalEd(); }
+async function loadCal() { try { const r = await apiPost({ action: 'calendar', key: mkey }); calItems = r && r.ok ? (r.items || []) : []; } catch (_) { calItems = []; } renderCalEd(); if (manage) renderRoster(); }
 async function loadRes() { try { const r = await apiPost({ action: 'resources', key: mkey }); resItems = r && r.ok ? (r.items || []) : []; } catch (_) { resItems = []; } renderResEd(); }
 function calDateLabel(i) {
   const [y, m, d] = String(i.date).split('-');
@@ -483,30 +500,48 @@ $('rDel').addEventListener('click', async () => {
 document.addEventListener('click', e => { const c = e.target.closest('[data-cedit]'); if (c) openCal(c.dataset.cedit); const r = e.target.closest('[data-redit]'); if (r) openRes(r.dataset.redit); });
 
 // 班级名单管理（班委）
+// 名单 ↔ 日历生日行：id 为 bd-<pid>；首批灌入的生日行 id 是 b01…b22，对应名单 p01…p22；再退一步按称呼匹配
+const birthdayOf = x => (typeof calItems !== 'undefined' ? calItems : []).find(c => c.kind === 'birthday' && (c.id === 'bd-' + x.id || c.id === 'b' + String(x.id).slice(1) || c.title === x.name));
+const bdayLabel = c => { if (!c) return ''; const [y, m, d] = c.date.split('-'); return (c.lunar ? '农历' : '') + +m + '/' + +d + (+y ? '' : ''); };
 function renderRoster() {
+  const act = rosterActive().length, stu = roster.filter(x => x.role !== '辅导团队' && x.status === '在读').length;
+  $('rsSum').textContent = roster.length ? `名单 ${roster.length} 人（在读学员 ${stu} · 可选 ${act}）— 点开查看 / 编辑` : '名单还是空的';
   const rows = [...roster].sort((a, b) => GROUP_ORDER.indexOf(rosterGroupOf(a)) - GROUP_ORDER.indexOf(rosterGroupOf(b)) || a.name.localeCompare(b.name, 'zh'));
   $('rsTable').innerHTML = rows.length
-    ? `<div class="tablewrap"><table><thead><tr><th>称呼</th><th>身份</th><th>组别</th><th>状态</th><th>备注</th><th></th></tr></thead><tbody>` +
-      rows.map(x => `<tr style="${x.status === '转班' || x.status === '退出' ? 'opacity:.5' : ''}"><td><b>${esc(x.name)}</b></td><td>${esc(x.role)}</td><td>${esc(x.group)}</td><td>${esc(x.status)}</td><td class="note">${esc(x.note)}</td><td><button class="link" data-rsedit="${esc(x.id)}">编辑</button></td></tr>`).join('') + '</tbody></table></div>'
+    ? `<div class="tablewrap"><table><thead><tr><th>称呼</th><th>身份</th><th>组别</th><th>状态</th><th>生日</th><th>备注</th><th></th></tr></thead><tbody>` +
+      rows.map(x => `<tr style="${x.status === '转班' || x.status === '退出' ? 'opacity:.5' : ''}"><td><b>${esc(x.name)}</b></td><td>${esc(x.role)}</td><td>${esc(x.group)}</td><td>${esc(x.status)}</td><td>${esc(bdayLabel(birthdayOf(x))) || '<span class="vacant">—</span>'}</td><td class="note">${esc(x.note)}</td><td><button class="link" data-rsedit="${esc(x.id)}">编辑</button></td></tr>`).join('') + '</tbody></table></div>'
     : '<div class="empty" style="padding:18px">名单还是空的。点「添加同学」录入，报名和定岗才能选到人。</div>';
 }
 function openRoster(id) {
   const x = id ? rosterById(id) : null; rsEditing = x ? x.id : null;
   $('rsTitle').textContent = x ? '修改 · ' + x.name : '添加同学';
   $('rsName').value = x ? x.name : ''; $('rsRole').value = x ? x.role : '学员'; $('rsGroup').value = x ? x.group : ''; $('rsStatus').value = x ? x.status : '在读'; $('rsNote').value = x ? x.note : '';
+  const bd = x ? birthdayOf(x) : null, [by, bm, bdd] = bd ? bd.date.split('-') : ['', '', ''];
+  $('rsBday').value = bd ? ((+by ? by : '2000') + '-' + bm + '-' + bdd) : ''; $('rsNoYear').checked = !!(bd && !+by); $('rsLunar').checked = !!(bd && bd.lunar);
   $('rsDel').hidden = !x; $('rsDel').textContent = '删除'; $('rsDel').dataset.armed = ''; $('rsErr').hidden = true;
   $('rsdlg').showModal();
 }
 $('rsAdd').addEventListener('click', () => openRoster(null));
 $('rsclose').addEventListener('click', () => $('rsdlg').close()); $('rscancel').addEventListener('click', () => $('rsdlg').close());
 $('rsRole').addEventListener('change', () => { if (!rsEditing) $('rsStatus').value = $('rsRole').value === '辅导团队' ? '在任' : '在读'; });
+$('rsBdayClear').addEventListener('click', () => { $('rsBday').value = ''; $('rsNoYear').checked = false; $('rsLunar').checked = false; });
 $('rsform').addEventListener('submit', async ev => {
   ev.preventDefault(); if (!API) return;
   const item = { id: rsEditing || undefined, name: $('rsName').value.trim(), role: $('rsRole').value, group: $('rsGroup').value, status: $('rsStatus').value, note: $('rsNote').value.trim() };
   $('rssave').disabled = true;
   try { const r = await apiPost({ action: 'roster_set', key: mkey, item }); if (!r.ok) throw new Error(r.error || '保存失败');
     const k = roster.findIndex(x => x.id === r.item.id); if (k >= 0) roster[k] = r.item; else roster.push(r.item);
-    $('rsdlg').close(); toast('已保存'); renderRoster(); render(); }
+    // 生日同步到日历：有日期 → 写/覆盖该人的生日行；清空 → 删掉
+    const old = birthdayOf(r.item), dv = $('rsBday').value;
+    if (dv) {
+      const bitem = { id: old ? old.id : 'bd-' + r.item.id, kind: 'birthday', title: r.item.name, date: ($('rsNoYear').checked ? '0000' : dv.slice(0, 4)) + dv.slice(4), lunar: $('rsLunar').checked, repeat: 'yearly', time: '', note: old ? old.note : '' };
+      const br = await apiPost({ action: 'calendar_set', key: mkey, item: bitem }); if (!br.ok) throw new Error('名单已存，生日保存失败：' + (br.error || ''));
+      const ck = calItems.findIndex(c => c.id === br.item.id); if (ck >= 0) calItems[ck] = br.item; else calItems.push(br.item);
+    } else if (old) {
+      const dr = await apiPost({ action: 'calendar_delete', key: mkey, id: old.id }); if (!dr.ok) throw new Error('名单已存，生日删除失败：' + (dr.error || ''));
+      calItems = calItems.filter(c => c.id !== old.id);
+    }
+    $('rsdlg').close(); toast('已保存'); renderRoster(); renderCalEd(); render(); }
   catch (err) { $('rsErr').textContent = err?.message || '保存失败'; $('rsErr').hidden = false; }
   finally { $('rssave').disabled = false; }
 });
@@ -517,7 +552,7 @@ $('rsDel').addEventListener('click', async () => {
   catch (err) { $('rsErr').textContent = '删除失败：' + (err?.message || ''); $('rsErr').hidden = false; }
   finally { b.disabled = false; }
 });
-document.addEventListener('click', e => { const b = e.target.closest('[data-rsedit]'); if (b) openRoster(b.dataset.rsedit); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-rsedit]'); if (b) openRoster(b.dataset.rsedit); const d = e.target.closest('[data-desc]'); if (d) { const id = d.dataset.desc; showDesc.has(id) ? showDesc.delete(id) : showDesc.add(id); render(); } });
 
 // 定岗编辑（班委）：从报名同学中勾选，或手填其他同学
 function openAssign(role) {
