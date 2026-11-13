@@ -261,7 +261,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     { t: '班费账本', d: '录入收支与凭证，发布公示。', url: '班费账本.html', who: '记账义工', key: '记账口令' },
     { t: '班委管理', d: '看板通知、班级日历、班级资料、微岗位定岗与报名。', url: '微岗位报名.html#manage', who: '班委', key: '班委口令' }
   ];
-  var TOTAL_ROLES = 20;
+  var TOTAL_ROLES = 20, BW_TOTAL = 6;   // 微岗位 20 · 班委 6（班长、两组组长、传灯/慈善/文传班委，定岗代码 bw1…bw6）
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
@@ -420,9 +420,11 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
       var n = signups.length, roles = {}, cnt = 0;
       signups.forEach(function (p) { (p.roles || []).forEach(function (r) { roles[r] = 1; cnt++; }); });
       var covered = Object.keys(roles).length;
-      var asgN = Object.keys(assigned).filter(function (r) { return (assigned[r] || []).length; }).length, open = Math.max(0, TOTAL_ROLES - asgN);
+      var has = function (r) { return (assigned[r] || []).length; };
+      var asgN = Object.keys(assigned).filter(function (r) { return r.indexOf('bw') !== 0 && has(r); }).length, open = Math.max(0, TOTAL_ROLES - asgN);
+      var bwN = Object.keys(assigned).filter(function (r) { return r.indexOf('bw') === 0 && has(r); }).length;
       out.push('<div class="stat"><div class="k"><i></i>班委和微岗位</div><div class="big">' + asgN + ' <small>/ ' + TOTAL_ROLES + ' 岗已定</small></div>' +
-        '<div class="gap"><b>' + n + '</b> 人提交了报名意愿，覆盖 <b>' + covered + '</b> 个岗位。' + (open ? '<br>还有 <b>' + open + '</b> 个岗位待定。' : '<br>所有岗位都已定岗 🙏') + '</div>' +
+        '<div class="gap">班委 <b>' + bwN + '</b> / ' + BW_TOTAL + ' 岗已定。<b>' + n + '</b> 人提交了微岗位报名意愿，覆盖 <b>' + covered + '</b> 个岗位。' + (open ? '<br>还有 <b>' + open + '</b> 个微岗位待定。' : '<br>所有微岗位都已定岗 🙏') + '</div>' +
         '<div class="links"><a href="微岗位报名.html">看定岗与意愿 ›</a></div></div>');
     }
     $('stats').innerHTML = out.join('');

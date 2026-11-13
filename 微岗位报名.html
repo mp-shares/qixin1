@@ -73,6 +73,8 @@ section.view[hidden] { display: none; }
 .role { display: grid; grid-template-columns: 150px 1fr; gap: 6px 16px; padding: 10px 16px; border-top: 1px solid var(--line); align-items: start; }
 .eyebrow .backlink { color: var(--accent); text-decoration: none; } .eyebrow .backlink:hover { text-decoration: underline; }
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; min-width: 0; }
+.cols.one { grid-template-columns: 1fr; }
+.cat.bw h2 { background: var(--accent-soft); }
 .col .cl { font-size: 11px; color: var(--fg-2); letter-spacing: .06em; margin-bottom: 4px; }
 .chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); cursor: default; }
 .people .link { font: inherit; font-size: 12px; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0 2px; text-decoration: underline; align-self: center; }
@@ -168,7 +170,7 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
   <section class="view" id="view-roles"></section>
   <section class="view" id="view-people" hidden></section>
 
-  <footer id="foot">修学支持 5 岗 · 关怀服务 5 岗 · 传灯活动 5 岗 · 班级共建 5 岗，共 20 个微岗位。每人至少认领 1 项，可轮换，可多人协作。</footer>
+  <footer id="foot">班委：班长、各组组长、传灯 / 慈善 / 文传班委（依《静心学堂班级手册 2.0》）。微岗位：修学支持 5 岗 · 关怀服务 5 岗 · 传灯活动 5 岗 · 班级共建 5 岗，共 20 个。每人至少认领 1 项，可轮换，可多人协作。</footer>
 </div>
 
 <dialog id="dlg">
@@ -243,7 +245,16 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
 <script src="banfei.config.js"></script>
 <script src="gate.js"></script>
 <script>
+// 班委：只有「定岗」没有「报名意愿」（assignOnly）；岗位与职责依《静心学堂班级手册 2.0》班委组成（4＋小组数）；定岗同样存公开表「定岗」（bw1…）
 const CATS = [
+  { id: 'bw', name: '班委', assignOnly: true, roles: [
+    ['bw1', '班长', '统筹班级事务，组织班委会'],
+    ['bw2', '1 组组长', '提醒自修和共修，关心组员状态'],
+    ['bw3', '2 组组长', '提醒自修和共修，关心组员状态'],
+    ['bw4', '传灯班委', '推动兴趣小组、读书会，对接学堂项目／活动'],
+    ['bw5', '慈善班委', '推动庆生、关怀，统筹班费管理，让班级有温度'],
+    ['bw6', '文传班委', '记录班级活动，整理班级故事，带动修学分享'],
+  ]},
   { id: 'xx', name: '修学支持类', roles: [
     ['xx1', '共修提醒员', '共修前一天提醒本组成员'],
     ['xx2', '资料小助手', '转发当周学习资料或链接'],
@@ -273,8 +284,9 @@ const CATS = [
     ['gj5', '文传协助员', '配合文传班委整理活动记录和班级故事，分享修学心得'],
   ]},
 ];
-const ROLE = {}; CATS.forEach(c => c.roles.forEach(([id, name, desc]) => ROLE[id] = { id, name, desc, cat: c.name }));
-const TOTAL_ROLES = Object.keys(ROLE).length;
+const ROLE = {}; CATS.forEach(c => c.roles.forEach(([id, name, desc]) => ROLE[id] = { id, name, desc, cat: c.name, assignOnly: !!c.assignOnly }));
+const MICRO = Object.keys(ROLE).filter(r => !ROLE[r].assignOnly), BW = Object.keys(ROLE).filter(r => ROLE[r].assignOnly);
+const TOTAL_ROLES = MICRO.length;
 
 const API = (window.BANFEI_API || '').trim();
 let people = [], assigned = {}, assigningRole = null, editingId = null, view = 'roles', manage = false, mkey = '';
@@ -294,7 +306,7 @@ function render() {
   let total = 0;
   ps.forEach(p => (p.roles || []).forEach(r => { if (byRole[r]) { byRole[r].push(p); total++; } }));
   const filled = Object.values(byRole).filter(a => a.length).length;
-  const nAssigned = Object.keys(ROLE).filter(r => assignedOf(r).length).length;
+  const nAssigned = MICRO.filter(r => assignedOf(r).length).length;
   $('tPeople').innerHTML = ps.length + '<small>人</small>';
   $('tFilled').innerHTML = filled + '<small>/ ' + TOTAL_ROLES + ' 岗</small>';
   $('tTotal').innerHTML = nAssigned + '<small>/ ' + TOTAL_ROLES + ' 岗</small>';
@@ -303,12 +315,14 @@ function render() {
   // 按岗位
   $('view-roles').innerHTML = CATS.map(c => {
     const catAssigned = c.roles.filter(([id]) => assignedOf(id).length).length;
-    return `<div class="cat"><h2><span>${c.name}</span><span class="sum">${catAssigned} / ${c.roles.length} 岗已定 · ${c.roles.reduce((n, [id]) => n + byRole[id].length, 0)} 人次有意愿</span></h2>` +
+    const sum = c.assignOnly ? `${catAssigned} / ${c.roles.length} 岗已定` : `${catAssigned} / ${c.roles.length} 岗已定 · ${c.roles.reduce((n, [id]) => n + byRole[id].length, 0)} 人次有意愿`;
+    return `<div class="cat${c.assignOnly ? ' bw' : ''}"><h2><span>${c.name}</span><span class="sum">${sum}</span></h2>` +
       c.roles.map(([id, name, desc]) => {
         const list = byRole[id], asg = assignedOf(id);
-        return `<div class="role"><div class="name"><span>${name}</span><span class="count ${asg.length ? '' : 'zero'}">${asg.length ? '已定岗' : '待定'}</span></div>` +
-          `<div class="cols"><div class="col"><div class="cl">定岗</div><div class="people">${asg.map(n => `<span class="chip on">${esc(n)}</span>`).join('') || '<span class="vacant">待定</span>'}${manage ? `<button class="link" data-assign="${id}">编辑</button>` : ''}</div></div>` +
-          `<div class="col"><div class="cl">报名意愿 · ${list.length}</div><div class="people">${list.length ? list.map(p => chip(p)).join('') : '<span class="vacant">暂无</span>'}</div></div></div>` +
+        const asgCol = `<div class="col"><div class="cl">${c.assignOnly ? '承担人' : '定岗'}</div><div class="people">${asg.map(n => `<span class="chip on">${esc(n)}</span>`).join('') || '<span class="vacant">待定</span>'}${manage ? `<button class="link" data-assign="${id}">编辑</button>` : ''}</div></div>`;
+        const willCol = c.assignOnly ? '' : `<div class="col"><div class="cl">报名意愿 · ${list.length}</div><div class="people">${list.length ? list.map(p => chip(p)).join('') : '<span class="vacant">暂无</span>'}</div></div>`;
+        return `<div class="role"><div class="name"><span>${name}</span><span class="count ${asg.length ? '' : 'zero'}">${asg.length ? '已定' : '待定'}</span></div>` +
+          `<div class="cols${c.assignOnly ? ' one' : ''}">${asgCol}${willCol}</div>` +
           `<div class="desc">${desc}</div></div>`;
       }).join('') + '</div>';
   }).join('');
@@ -455,7 +469,7 @@ $('aform').addEventListener('submit', async ev => {
 });
 
 // Editor
-$('fRoles').innerHTML = CATS.map(c => `<div class="group"><h4>${c.name}</h4><div class="opts">${c.roles.map(([id, name]) => `<label class="opt" title="${ROLE[id].desc}"><input type="checkbox" name="role" value="${id}">${name}</label>`).join('')}</div></div>`).join('');
+$('fRoles').innerHTML = CATS.filter(c => !c.assignOnly).map(c => `<div class="group"><h4>${c.name}</h4><div class="opts">${c.roles.map(([id, name]) => `<label class="opt" title="${ROLE[id].desc}"><input type="checkbox" name="role" value="${id}">${name}</label>`).join('')}</div></div>`).join('');
 
 function openEditor(id) {
   editingId = id || null;
@@ -559,7 +573,7 @@ $('copyBtn').addEventListener('click', async () => {
   const lines = ['栖心一班 班委和微岗位（' + new Date().toLocaleDateString('zh-CN') + '）', '已定岗 ' + Object.keys(ROLE).filter(r => assignedOf(r).length).length + ' / ' + TOTAL_ROLES + ' 岗 · ' + ps.length + ' 人提交了报名意愿', ''];
   CATS.forEach(c => {
     lines.push('【' + c.name + '】');
-    c.roles.forEach(([id, name]) => { const names = ps.filter(p => (p.roles || []).includes(id)).map(p => p.name), asg = assignedOf(id); lines.push('  ' + name + '：定岗 ' + (asg.length ? asg.join('、') : '（待定）') + '；意愿 ' + (names.length ? names.join('、') : '（无）')); });
+    c.roles.forEach(([id, name]) => { const names = ps.filter(p => (p.roles || []).includes(id)).map(p => p.name), asg = assignedOf(id); lines.push('  ' + name + '：' + (c.assignOnly ? (asg.length ? asg.join('、') : '（待定）') : '定岗 ' + (asg.length ? asg.join('、') : '（待定）') + '；意愿 ' + (names.length ? names.join('、') : '（无）'))); });
     lines.push('');
   });
   const text = lines.join('\n');
