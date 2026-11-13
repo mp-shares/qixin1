@@ -6,7 +6,7 @@
 <title>栖心一班微岗位认领</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
 <style>
-/* Layout: one column, summary tiles → tabbed views (按岗位 / 按人员 / 组修时间) → dialog editor. Cool paper + 竹青 accent. */
+/* Layout: one column, summary tiles → tabbed views (按岗位 / 按人员) → dialog editor. 「组修时间」已于 2026-11-13 下线（分组固定后不再需要）；表里 times 列保留不显示。 Cool paper + 竹青 accent. */
 :root {
   --bg: #f3f4f1;
   --paper: #ffffff;
@@ -142,7 +142,6 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-roles" aria-selected="true" data-view="roles">按岗位</button>
       <button role="tab" id="tab-people" aria-selected="false" data-view="people" hidden>按人员</button>
-      <button role="tab" id="tab-time" aria-selected="false" data-view="time">组修时间</button>
     </div>
     <div class="actions">
       <button class="btn" id="manageBtn">班委管理</button>
@@ -157,7 +156,6 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
     <div class="actions" style="align-items:center"><button type="button" class="btn primary" id="noticeSave">保存通知</button><span class="sum" id="noticeAt" style="font-size:13px;color:var(--fg-2)"></span></div></div></div></section>
   <section class="view" id="view-roles"></section>
   <section class="view" id="view-people" hidden></section>
-  <section class="view" id="view-time" hidden></section>
 
   <footer id="foot">修学支持 5 岗 · 关怀服务 5 岗 · 传灯活动 5 岗 · 班级共建 5 岗，共 20 个微岗位。每人至少认领 1 项，可轮换，可多人协作。</footer>
 </div>
@@ -167,7 +165,6 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
     <div class="dhead"><h3 id="dlgTitle">添加报名</h3><button type="button" class="btn" id="closeBtn">关闭</button></div>
     <div class="dbody">
       <div class="field"><label class="lab" for="fName">姓名 / 法名</label><input type="text" id="fName" autocomplete="off" required></div>
-      <div class="group"><div class="lab">方便的组修时间（美东）</div><div class="opts" id="fTimes"></div></div>
       <div id="fRoles"></div>
       <div class="field"><label class="lab" for="fOther">其他岗位或说明</label><input type="text" id="fOther" autocomplete="off" placeholder="清单之外想承担的事，可留空"></div>
       <div class="field"><label class="lab" for="fNote">对承担班委的想法 / 备注</label><textarea id="fNote"></textarea></div>
@@ -226,7 +223,6 @@ const CATS = [
   ]},
 ];
 const ROLE = {}; CATS.forEach(c => c.roles.forEach(([id, name, desc]) => ROLE[id] = { id, name, desc, cat: c.name }));
-const TIMES = ['周四晚', '周五早', '周五晚'];
 const TOTAL_ROLES = Object.keys(ROLE).length;
 
 const API = (window.BANFEI_API || '').trim();
@@ -267,23 +263,14 @@ function render() {
   if (!manage) { $('view-people').innerHTML = ''; } else if (!ps.length) {
     $('view-people').innerHTML = `<div class="empty"><b>还没有报名记录</b>点右上角「添加报名」录入第一位同学，或等待数据加载。</div>`;
   } else {
-    $('view-people').innerHTML = `<div class="tablewrap"><table><thead><tr><th>姓名</th><th>组修时间</th><th>认领岗位</th><th>其他 / 备注</th><th></th></tr></thead><tbody>` +
+    $('view-people').innerHTML = `<div class="tablewrap"><table><thead><tr><th>姓名</th><th>认领岗位</th><th>其他 / 备注</th><th></th></tr></thead><tbody>` +
       ps.map(p => `<tr><td><b>${esc(p.name)}</b></td>` +
-        `<td><div class="cell-chips">${(p.times || []).map(t => `<span class="tag t">${esc(t)}</span>`).join('') || '<span class="vacant">未填</span>'}</div></td>` +
         `<td><div class="cell-chips">${(p.roles || []).map(r => ROLE[r] ? `<span class="tag">${ROLE[r].name}</span>` : '').join('')}${p.other ? `<span class="tag t">其他：${esc(p.other)}</span>` : ''}${!(p.roles || []).length && !p.other ? '<span class="vacant">尚未认领</span>' : ''}</div></td>` +
         `<td class="note">${esc(p.note)}</td>` +
         `<td><button class="link" data-edit="${esc(p.id)}">编辑</button></td></tr>`).join('') +
       `</tbody></table></div>`;
   }
 
-  // 组修时间
-  const byTime = {}; TIMES.forEach(t => byTime[t] = []);
-  const otherTimes = [];
-  ps.forEach(p => (p.times || []).forEach(t => { if (byTime[t]) byTime[t].push(p); else otherTimes.push({ t, p }); }));
-  $('view-time').innerHTML = `<div class="cat"><h2><span>方便的组修时间（美东）</span><span class="sum">可多选，一人可出现在多档</span></h2>` +
-    TIMES.map(t => `<div class="role"><div class="name"><span>${t}</span><span class="count ${byTime[t].length ? '' : 'zero'}">${byTime[t].length}</span></div><div class="people">${byTime[t].length ? byTime[t].map(p => chip(p)).join('') : '<span class="vacant">无人</span>'}</div></div>`).join('') +
-    (otherTimes.length ? `<div class="role"><div class="name"><span>其他</span></div><div class="people">${otherTimes.map(({ t, p }) => chip(p, esc(p.name) + ' · ' + esc(t))).join('')}</div></div>` : '') +
-    `</div>`;
 }
 function chip(p, label) { return manage ? `<button class="chip" data-edit="${esc(p.id)}">${label || esc(p.name)}</button>` : `<span class="chip">${label || esc(p.name)}</span>`; }
 
@@ -299,10 +286,9 @@ document.querySelectorAll('.tabs button').forEach(btn => btn.addEventListener('c
   ['roles', 'people', 'time'].forEach(v => $('view-' + v).hidden = v !== view);
   try { localStorage.setItem('wgw-view', view); } catch (_) {}
 }));
-try { const v = localStorage.getItem('wgw-view'); if (v) document.querySelector(`.tabs button[data-view="${v}"]`)?.click(); } catch (_) {}
+try { const v = localStorage.getItem('wgw-view'); if (v && v !== 'time') document.querySelector(`.tabs button[data-view="${v}"]`)?.click(); } catch (_) {}
 
 // Editor
-$('fTimes').innerHTML = TIMES.map(t => `<label class="opt"><input type="checkbox" name="time" value="${t}">${t}</label>`).join('');
 $('fRoles').innerHTML = CATS.map(c => `<div class="group"><h4>${c.name}</h4><div class="opts">${c.roles.map(([id, name]) => `<label class="opt" title="${ROLE[id].desc}"><input type="checkbox" name="role" value="${id}">${name}</label>`).join('')}</div></div>`).join('');
 
 function openEditor(id) {
@@ -312,7 +298,6 @@ function openEditor(id) {
   $('fName').value = p ? p.name : '';
   $('fOther').value = p ? (p.other || '') : '';
   $('fNote').value = p ? (p.note || '') : '';
-  document.querySelectorAll('#fTimes input').forEach(i => i.checked = !!(p && (p.times || []).includes(i.value)));
   document.querySelectorAll('#fRoles input').forEach(i => i.checked = !!(p && (p.roles || []).includes(i.value)));
   $('delBtn').hidden = !p; $('delBtn').textContent = '删除此人'; $('delBtn').dataset.armed = '';
   $('fErr').hidden = true;
@@ -362,7 +347,7 @@ $('cancelBtn').addEventListener('click', () => $('dlg').close());
 function readForm() {
   return {
     name: $('fName').value.trim(),
-    times: [...document.querySelectorAll('#fTimes input:checked')].map(i => i.value),
+    times: (editingId && (people.find(x => x.id === editingId) || {}).times) || [],   // 组修时间已不显示，编辑时原样保留
     roles: [...document.querySelectorAll('#fRoles input:checked')].map(i => i.value),
     other: $('fOther').value.trim(),
     note: $('fNote').value.trim(),
@@ -411,8 +396,6 @@ $('copyBtn').addEventListener('click', async () => {
     c.roles.forEach(([id, name]) => { const names = ps.filter(p => (p.roles || []).includes(id)).map(p => p.name); lines.push('  ' + name + '：' + (names.length ? names.join('、') : '（空缺）')); });
     lines.push('');
   });
-  lines.push('【组修时间】');
-  TIMES.forEach(t => lines.push('  ' + t + '：' + (ps.filter(p => (p.times || []).includes(t)).map(p => p.name).join('、') || '（无）')));
   const text = lines.join('\n');
   try { await navigator.clipboard.writeText(text); toast('已复制到剪贴板'); }
   catch (_) {
