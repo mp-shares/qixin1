@@ -67,7 +67,9 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4vw, 
 .btn:focus-visible, .tabs button:focus-visible, .chip:focus-visible, input:focus-visible, textarea:focus-visible, label.opt:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 section.view[hidden] { display: none; }
-.cat { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+.cat { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; overflow: hidden; min-width: 0; align-self: start; }
+/* 微岗位四类 2×2 排布（宽屏）；班委一类通栏在上 */
+@media (min-width: 760px) { #view-roles { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } #view-roles .cat { margin-bottom: 0; } #view-roles .cat.bw { grid-column: 1 / -1; } #view-roles .cat:not(.bw) .role { grid-template-columns: 112px minmax(0,1fr) minmax(0,1fr); gap: 4px 10px; padding: 7px 12px; } #view-roles .cat:not(.bw) .role .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; } #view-roles .cat:not(.bw) .role .count { display: none; } #view-roles .cat:not(.bw) h2 { padding: 10px 12px; font-size: 16px; } #view-roles .cat:not(.bw) .role.head { padding: 4px 12px; } }
 .cat h2 { font-family: var(--display); font-size: 17px; font-weight: 600; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .cat h2 .sum { font-family: var(--body); font-size: 13px; color: var(--fg-2); font-weight: 400; font-variant-numeric: tabular-nums; }
 .role { display: grid; grid-template-columns: 132px minmax(0,1fr) minmax(0,1fr); gap: 4px 14px; padding: 7px 16px; border-top: 1px solid var(--line); align-items: center; }
@@ -87,7 +89,7 @@ section.view[hidden] { display: none; }
 .role:first-of-type { border-top: 0; }
 .role .name { font-weight: 500; display: flex; align-items: baseline; gap: 8px; }
 .role .desc { color: var(--fg-2); font-size: 12.5px; }
-.count { font-size: 11px; min-width: 22px; text-align: center; padding: 0 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.count { font-size: 11px; min-width: 22px; text-align: center; padding: 0 6px; border-radius: 999px; white-space: nowrap; background: var(--accent-soft); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
 .count.zero { background: var(--warn-soft); color: var(--warn); }
 .people { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; align-items: center; }
 .chip { font: inherit; font-size: 12.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper-2); color: var(--fg); cursor: pointer; }
