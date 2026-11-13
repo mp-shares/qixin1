@@ -163,6 +163,7 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
   </div>
 
   <section class="view" id="noticeEd" hidden><div class="cat"><h2><span>看板通知 · 置顶</span><span class="sum">显示在看板顶部「通知 · 近期」，到期自动下架<button type="button" class="btn primary" id="ntAdd">＋ 快捷通知</button></span></h2><div id="ntTable"></div></div></section>
+  <section class="view" id="rosterEd" hidden><div class="cat"><h2><span>班级名单</span><span class="sum">报名、定岗都从这里选人<button type="button" class="btn" id="rsAdd">＋ 添加同学</button></span></h2><div id="rsTable"></div></div></section>
   <section class="view" id="calEd" hidden><div class="cat"><h2><span>班级日历</span><span class="sum"><button type="button" class="pill on" data-f="event">班级事项</button> <button type="button" class="pill" data-f="birthday">生日</button><button type="button" class="btn" id="calAdd">＋ 添加</button></span></h2><div id="calTable"></div></div></section>
   <section class="view" id="resEd" hidden><div class="cat"><h2><span>班级资料</span><span class="sum">显示在看板「班级资料」<button type="button" class="btn" id="resAdd">＋ 添加</button></span></h2><div id="resTable"></div></div></section>
   <section class="view" id="view-roles"></section>
@@ -175,7 +176,7 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
   <form id="form" method="dialog">
     <div class="dhead"><h3 id="dlgTitle">添加报名</h3><button type="button" class="btn" id="closeBtn">关闭</button></div>
     <div class="dbody">
-      <div class="field"><label class="lab" for="fName">姓名 / 法名</label><input type="text" id="fName" autocomplete="off" required></div>
+      <div class="field"><label class="lab" for="fName">同学（从班级名单选；名单在管理页维护）</label><select id="fName" required><option value="">请选择…</option></select></div>
       <div id="fRoles"></div>
       <div class="field"><label class="lab" for="fOther">其他岗位或说明</label><input type="text" id="fOther" autocomplete="off" placeholder="清单之外想承担的事，可留空"></div>
       <div class="field"><label class="lab" for="fNote">对承担班委的想法 / 备注</label><textarea id="fNote"></textarea></div>
@@ -186,6 +187,20 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
       <div><button type="button" class="btn danger" id="delBtn" hidden>删除此人</button></div>
       <div class="right"><button type="button" class="btn" id="cancelBtn">取消</button><button type="submit" class="btn primary" id="saveBtn">保存</button></div>
     </div>
+  </form>
+</dialog>
+<dialog id="rsdlg">
+  <form id="rsform" method="dialog">
+    <div class="dhead"><h3 id="rsTitle">添加同学</h3><button type="button" class="btn" id="rsclose">关闭</button></div>
+    <div class="dbody">
+      <div class="field"><label class="lab" for="rsName">称呼（页面上显示的名字）</label><input type="text" id="rsName" autocomplete="off" required></div>
+      <div class="field"><label class="lab" for="rsRole">身份</label><select id="rsRole"><option value="学员">学员</option><option value="辅导团队">辅导团队</option></select></div>
+      <div class="field"><label class="lab" for="rsGroup">组别</label><select id="rsGroup"><option value="">不分组</option><option value="1组">1 组</option><option value="2组">2 组</option></select></div>
+      <div class="field"><label class="lab" for="rsStatus">状态</label><select id="rsStatus"><option value="在读">在读</option><option value="在任">在任（辅导团队）</option><option value="休学">休学</option><option value="转班">转班</option><option value="退出">退出</option></select></div>
+      <div class="field"><label class="lab" for="rsNote">备注（可选，仅班委可见）</label><input type="text" id="rsNote" autocomplete="off"></div>
+      <div class="err" id="rsErr" hidden></div>
+    </div>
+    <div class="dfoot"><div><button type="button" class="btn danger" id="rsDel" hidden>删除</button></div><div class="right"><button type="button" class="btn" id="rscancel">取消</button><button type="submit" class="btn primary" id="rssave">保存</button></div></div>
   </form>
 </dialog>
 <dialog id="ndlg">
@@ -236,8 +251,7 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
   <form id="aform" method="dialog">
     <div class="dhead"><h3 id="aTitle">定岗</h3><button type="button" class="btn" id="aclose">关闭</button></div>
     <div class="dbody">
-      <div class="group"><div class="lab">从已报名的同学中选</div><div class="opts" id="aOpts"></div></div>
-      <div class="field"><label class="lab" for="aExtra">其他同学（顿号或逗号分隔）</label><input type="text" id="aExtra" autocomplete="off" placeholder="不在报名名单里的同学"></div>
+      <div class="group"><div class="lab">从班级名单中选（可多选）</div><div id="aOpts"></div></div>
       <div class="err" id="aErr" hidden></div>
     </div>
     <div class="dfoot"><div></div><div class="right"><button type="button" class="btn" id="acancel">取消</button><button type="submit" class="btn primary" id="asave">保存定岗</button></div></div>
@@ -302,7 +316,15 @@ const MICRO = Object.keys(ROLE).filter(r => !ROLE[r].assignOnly), BW = Object.ke
 const TOTAL_ROLES = MICRO.length;
 
 const API = (window.BANFEI_API || '').trim();
-let people = [], assigned = {}, assigningRole = null, editingId = null, view = 'roles', manage = false, mkey = '';
+let people = [], assigned = {}, roster = [], rsEditing = null, assigningRole = null, editingId = null, view = 'roles', manage = false, mkey = '';
+// 名单：报名和定岗都从这里选人；转班/退出的不出现在选择里
+const rosterById = id => roster.find(x => x.id === id);
+const rosterActive = () => roster.filter(x => x.status !== '转班' && x.status !== '退出');
+const rosterGroupOf = x => x.role === '辅导团队' ? '辅导团队' : (x.group || '未分组');
+const GROUP_ORDER = ['1组', '2组', '未分组', '辅导团队'];
+function rosterGrouped() { const g = {}; rosterActive().forEach(x => (g[rosterGroupOf(x)] = g[rosterGroupOf(x)] || []).push(x)); return GROUP_ORDER.filter(k => g[k]).map(k => [k, g[k].sort((a, b) => a.name.localeCompare(b.name, 'zh'))]); }
+const personLabel = x => x.name + (x.status === '休学' ? '（休学）' : '');
+const displayName = p => (p.pid && rosterById(p.pid) ? rosterById(p.pid).name : p.name);
 const assignedOf = r => assigned[r] || [];
 try { mkey = localStorage.getItem('wgw-key') || ''; } catch (_) {}
 const $ = id => document.getElementById(id);
@@ -311,7 +333,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 function setStatus(kind, text) { const el = $('status'); el.className = 'status ' + kind; $('statusText').textContent = text; }
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2200); }
 
-function sortedPeople() { return [...people].sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh')); }
+function sortedPeople() { return [...people].map(p => Object.assign({}, p, { name: displayName(p) })).sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh')); }
 
 function render() {
   const ps = sortedPeople();
@@ -460,21 +482,58 @@ $('rDel').addEventListener('click', async () => {
 });
 document.addEventListener('click', e => { const c = e.target.closest('[data-cedit]'); if (c) openCal(c.dataset.cedit); const r = e.target.closest('[data-redit]'); if (r) openRes(r.dataset.redit); });
 
+// 班级名单管理（班委）
+function renderRoster() {
+  const rows = [...roster].sort((a, b) => GROUP_ORDER.indexOf(rosterGroupOf(a)) - GROUP_ORDER.indexOf(rosterGroupOf(b)) || a.name.localeCompare(b.name, 'zh'));
+  $('rsTable').innerHTML = rows.length
+    ? `<div class="tablewrap"><table><thead><tr><th>称呼</th><th>身份</th><th>组别</th><th>状态</th><th>备注</th><th></th></tr></thead><tbody>` +
+      rows.map(x => `<tr style="${x.status === '转班' || x.status === '退出' ? 'opacity:.5' : ''}"><td><b>${esc(x.name)}</b></td><td>${esc(x.role)}</td><td>${esc(x.group)}</td><td>${esc(x.status)}</td><td class="note">${esc(x.note)}</td><td><button class="link" data-rsedit="${esc(x.id)}">编辑</button></td></tr>`).join('') + '</tbody></table></div>'
+    : '<div class="empty" style="padding:18px">名单还是空的。点「添加同学」录入，报名和定岗才能选到人。</div>';
+}
+function openRoster(id) {
+  const x = id ? rosterById(id) : null; rsEditing = x ? x.id : null;
+  $('rsTitle').textContent = x ? '修改 · ' + x.name : '添加同学';
+  $('rsName').value = x ? x.name : ''; $('rsRole').value = x ? x.role : '学员'; $('rsGroup').value = x ? x.group : ''; $('rsStatus').value = x ? x.status : '在读'; $('rsNote').value = x ? x.note : '';
+  $('rsDel').hidden = !x; $('rsDel').textContent = '删除'; $('rsDel').dataset.armed = ''; $('rsErr').hidden = true;
+  $('rsdlg').showModal();
+}
+$('rsAdd').addEventListener('click', () => openRoster(null));
+$('rsclose').addEventListener('click', () => $('rsdlg').close()); $('rscancel').addEventListener('click', () => $('rsdlg').close());
+$('rsRole').addEventListener('change', () => { if (!rsEditing) $('rsStatus').value = $('rsRole').value === '辅导团队' ? '在任' : '在读'; });
+$('rsform').addEventListener('submit', async ev => {
+  ev.preventDefault(); if (!API) return;
+  const item = { id: rsEditing || undefined, name: $('rsName').value.trim(), role: $('rsRole').value, group: $('rsGroup').value, status: $('rsStatus').value, note: $('rsNote').value.trim() };
+  $('rssave').disabled = true;
+  try { const r = await apiPost({ action: 'roster_set', key: mkey, item }); if (!r.ok) throw new Error(r.error || '保存失败');
+    const k = roster.findIndex(x => x.id === r.item.id); if (k >= 0) roster[k] = r.item; else roster.push(r.item);
+    $('rsdlg').close(); toast('已保存'); renderRoster(); render(); }
+  catch (err) { $('rsErr').textContent = err?.message || '保存失败'; $('rsErr').hidden = false; }
+  finally { $('rssave').disabled = false; }
+});
+$('rsDel').addEventListener('click', async () => {
+  const b = $('rsDel'); if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = '再点一次确认删除（建议改状态而不是删）'; return; }
+  b.disabled = true;
+  try { const r = await apiPost({ action: 'roster_delete', key: mkey, id: rsEditing }); if (!r.ok) throw new Error(r.error); roster = roster.filter(x => x.id !== rsEditing); $('rsdlg').close(); toast('已删除'); renderRoster(); render(); }
+  catch (err) { $('rsErr').textContent = '删除失败：' + (err?.message || ''); $('rsErr').hidden = false; }
+  finally { b.disabled = false; }
+});
+document.addEventListener('click', e => { const b = e.target.closest('[data-rsedit]'); if (b) openRoster(b.dataset.rsedit); });
+
 // 定岗编辑（班委）：从报名同学中勾选，或手填其他同学
 function openAssign(role) {
-  assigningRole = role; const cur = assignedOf(role), names = sortedPeople().map(p => p.name);
-  $('aTitle').textContent = '定岗 · ' + ROLE[role].name;
-  $('aOpts').innerHTML = names.map(n => `<label class="opt"><input type="checkbox" name="an" value="${esc(n)}"${cur.includes(n) ? ' checked' : ''}>${esc(n)}</label>`).join('') || '<span class="vacant">还没有报名记录</span>';
-  $('aExtra').value = cur.filter(n => !names.includes(n)).join('、');
+  assigningRole = role; const cur = assignedOf(role), known = new Set(roster.map(x => x.name));
+  $('aTitle').textContent = (ROLE[role].assignOnly ? '承担人 · ' : '定岗 · ') + ROLE[role].name;
+  const groups = rosterGrouped().map(([g, xs]) => `<div class="group"><h4>${esc(g)}</h4><div class="opts">${xs.map(x => `<label class="opt"><input type="checkbox" name="an" value="${esc(x.name)}"${cur.includes(x.name) ? ' checked' : ''}>${esc(personLabel(x))}</label>`).join('')}</div></div>`);
+  const extra = cur.filter(n => !known.has(n));   // 名单里没有的旧名字：保留可取消
+  if (extra.length) groups.push(`<div class="group"><h4>不在名单里（取消勾选即移除）</h4><div class="opts">${extra.map(n => `<label class="opt"><input type="checkbox" name="an" value="${esc(n)}" checked>${esc(n)}</label>`).join('')}</div></div>`);
+  $('aOpts').innerHTML = groups.join('') || '<span class="vacant">班级名单还是空的，请先在「班级名单」里添加同学。</span>';
   $('aErr').hidden = true; $('adlg').showModal();
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-assign]'); if (b && manage) openAssign(b.dataset.assign); });
 $('aclose').addEventListener('click', () => $('adlg').close()); $('acancel').addEventListener('click', () => $('adlg').close());
 $('aform').addEventListener('submit', async ev => {
   ev.preventDefault(); if (!API || !assigningRole) return;
-  const picked = [...document.querySelectorAll('#aOpts input:checked')].map(i => i.value);
-  const extra = $('aExtra').value.split(/[、,，;；\s]+/).map(x => x.trim()).filter(Boolean);
-  const names = [...new Set(picked.concat(extra))];
+  const names = [...new Set([...document.querySelectorAll('#aOpts input:checked')].map(i => i.value))];
   $('asave').disabled = true;
   try { const r = await apiPost({ action: 'assign_set', key: mkey, role: assigningRole, names }); if (!r.ok) throw new Error(r.error || '保存失败'); assigned[assigningRole] = r.names || names; $('adlg').close(); toast('已更新定岗'); render(); }
   catch (err) { $('aErr').textContent = err?.message || '保存失败'; $('aErr').hidden = false; }
@@ -487,8 +546,11 @@ $('fRoles').innerHTML = CATS.filter(c => !c.assignOnly).map(c => `<div class="gr
 function openEditor(id) {
   editingId = id || null;
   const p = id ? people.find(x => x.id === id) : null;
-  $('dlgTitle').textContent = p ? '修改报名 · ' + p.name : '添加报名';
-  $('fName').value = p ? p.name : '';
+  $('dlgTitle').textContent = p ? '修改报名 · ' + displayName(p) : '添加报名';
+  const sel = $('fName'), curPid = p ? (p.pid || (roster.find(x => x.name === p.name) || {}).id || '') : '';
+  sel.innerHTML = '<option value="">请选择…</option>' + rosterGrouped().map(([g, xs]) => `<optgroup label="${esc(g)}">${xs.map(x => `<option value="${esc(x.id)}">${esc(personLabel(x))}</option>`).join('')}</optgroup>`).join('') +
+    (p && !curPid ? `<option value="" selected>${esc(p.name)}（不在名单里，请改选）</option>` : '');
+  sel.value = curPid; if (p && !curPid) sel.selectedIndex = sel.options.length - 1;   // 旧记录不在名单里：显示原名并提示改选
   $('fOther').value = p ? (p.other || '') : '';
   $('fNote').value = p ? (p.note || '') : '';
   document.querySelectorAll('#fRoles input').forEach(i => i.checked = !!(p && (p.roles || []).includes(i.value)));
@@ -496,7 +558,7 @@ function openEditor(id) {
   $('fErr').hidden = true;
   $('fKey').value = mkey; $('fKey').closest('.field').hidden = !!mkey;
   const ro = !API;
-  $('form').querySelectorAll('input, textarea').forEach(i => i.disabled = ro);
+  $('form').querySelectorAll('input, textarea, select').forEach(i => i.disabled = ro);
   $('saveBtn').disabled = ro; $('delBtn').disabled = ro;
   if (ro) { $('fErr').textContent = '还没有配置后端，当前只能查看。'; $('fErr').hidden = false; }
   $('dlg').showModal();
@@ -562,7 +624,7 @@ document.addEventListener('click', e => {
 function setMode(on) {
   manage = on;
   $('manageBtn').hidden = on; $('exitBtn').hidden = !on; $('copyBtn').hidden = !on; $('addBtn').hidden = !on;
-  $('noticeEd').hidden = !on; $('calEd').hidden = !on; $('resEd').hidden = !on; if (on) { Promise.all([loadCal(), loadRes()]).then(loadNotice); }
+  $('noticeEd').hidden = !on; $('rosterEd').hidden = !on; $('calEd').hidden = !on; $('resEd').hidden = !on; if (on) renderRoster(); if (on) { Promise.all([loadCal(), loadRes()]).then(loadNotice); }
   $('tab-people').hidden = !on;
   if (!on && view === 'people') document.getElementById('tab-roles').click();
   render();
@@ -586,8 +648,9 @@ $('closeBtn').addEventListener('click', () => $('dlg').close());
 $('cancelBtn').addEventListener('click', () => $('dlg').close());
 
 function readForm() {
+  const who = rosterById($('fName').value);
   return {
-    name: $('fName').value.trim(),
+    pid: who ? who.id : '', name: who ? who.name : '',
     times: (editingId && (people.find(x => x.id === editingId) || {}).times) || [],   // 组修时间已不显示，编辑时原样保留
     roles: [...document.querySelectorAll('#fRoles input:checked')].map(i => i.value),
     other: $('fOther').value.trim(),
@@ -600,11 +663,11 @@ $('form').addEventListener('submit', async e => {
   e.preventDefault();
   if (saving || !API) return;
   const data = readForm();
-  if (!data.name) { $('fErr').textContent = '请填写姓名。'; $('fErr').hidden = false; return; }
+  if (!data.pid) { $('fErr').textContent = '请从班级名单里选同学；名单里没有的，先到「班级名单」添加。'; $('fErr').hidden = false; return; }
   const key = $('fKey').value.trim();
   if (!key) { $('fErr').textContent = '请输入班委口令。'; $('fErr').hidden = false; return; }
-  const dup = people.find(p => p.name === data.name && p.id !== editingId);
-  if (dup) { $('fErr').textContent = '已有同名记录，请直接点那条修改。'; $('fErr').hidden = false; return; }
+  const dup = people.find(p => (p.pid ? p.pid === data.pid : p.name === data.name) && p.id !== editingId);
+  if (dup) { $('fErr').textContent = '这位同学已有报名记录，请直接点那条修改。'; $('fErr').hidden = false; return; }
   saving = true; $('saveBtn').disabled = true;
   try {
     const r = await apiPost({ action: 'signup_set', key, person: { id: editingId || '', ...data } });
@@ -653,7 +716,7 @@ async function apiPost(body) {
 async function load() {
   const r = (manage || location.hash === '#manage') && mkey ? await apiPost({ action: 'signups', key: mkey }) : await QX.api('signups');
   if (!r.ok) throw new Error(r.error || '读取失败');
-  people = r.people || []; assigned = r.assigned || {}; render(); setStatus('on', '已连接 · ' + people.length + ' 人');
+  people = r.people || []; assigned = r.assigned || {}; roster = r.roster || []; render(); if (manage) renderRoster(); setStatus('on', '已连接 · ' + people.length + ' 人');
 }
 render();
 if (!API) { setStatus('ro', '未配置后端 · 只读'); $('manageBtn').disabled = true; }
