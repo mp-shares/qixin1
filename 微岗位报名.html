@@ -162,9 +162,7 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
     </div>
   </div>
 
-  <section class="view" id="noticeEd" hidden><div class="cat"><h2><span>看板通知</span><span class="sum">显示在班级看板顶部，留空则不显示</span></h2>
-    <div style="padding:12px 16px;display:grid;gap:8px"><textarea id="noticeText" placeholder="例：本周四晚 8 点线上共修，请提前 5 分钟进会议室。"></textarea>
-    <div class="actions" style="align-items:center"><button type="button" class="btn primary" id="noticeSave">保存通知</button><span class="sum" id="noticeAt" style="font-size:13px;color:var(--fg-2)"></span></div></div></div></section>
+  <section class="view" id="noticeEd" hidden><div class="cat"><h2><span>看板通知 · 置顶</span><span class="sum">显示在看板顶部「通知 · 近期」，到期自动下架<button type="button" class="btn primary" id="ntAdd">＋ 快捷通知</button></span></h2><div id="ntTable"></div></div></section>
   <section class="view" id="calEd" hidden><div class="cat"><h2><span>班级日历</span><span class="sum"><button type="button" class="pill on" data-f="event">班级事项</button> <button type="button" class="pill" data-f="birthday">生日</button><button type="button" class="btn" id="calAdd">＋ 添加</button></span></h2><div id="calTable"></div></div></section>
   <section class="view" id="resEd" hidden><div class="cat"><h2><span>班级资料</span><span class="sum">显示在看板「班级资料」<button type="button" class="btn" id="resAdd">＋ 添加</button></span></h2><div id="resTable"></div></div></section>
   <section class="view" id="view-roles"></section>
@@ -188,6 +186,21 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
       <div><button type="button" class="btn danger" id="delBtn" hidden>删除此人</button></div>
       <div class="right"><button type="button" class="btn" id="cancelBtn">取消</button><button type="submit" class="btn primary" id="saveBtn">保存</button></div>
     </div>
+  </form>
+</dialog>
+<dialog id="ndlg">
+  <form id="nform" method="dialog">
+    <div class="dhead"><h3 id="nTitle">快捷通知</h3><button type="button" class="btn" id="nclose">关闭</button></div>
+    <div class="dbody">
+      <div class="field"><label class="lab" for="nText">通知内容</label><textarea id="nText" required placeholder="例：本周四晚组修改到线上，请提前 5 分钟进会议室。"></textarea></div>
+      <div class="field"><label class="lab" for="nNote">补充说明（可选，小字显示）</label><input type="text" id="nNote" autocomplete="off"></div>
+      <div class="field"><label class="lab" for="nLink">链接（可选）</label><input type="text" id="nLink" autocomplete="off" placeholder="https://… 或本站页面"></div>
+      <div class="field"><label class="lab" for="nUntil">显示到（含当天；留空=长期）</label><input type="date" id="nUntil"></div>
+      <div class="opts"><label class="opt"><input type="checkbox" id="nImp">标为重要（看板上红色标记、排最前）</label></div>
+      <div class="sum" id="nRef" style="font-size:12px;color:var(--fg-2)"></div>
+      <div class="err" id="nErr" hidden></div>
+    </div>
+    <div class="dfoot"><div><button type="button" class="btn danger" id="nDel" hidden>下架</button></div><div class="right"><button type="button" class="btn" id="ncancel">取消</button><button type="submit" class="btn primary" id="nsave">保存</button></div></div>
   </form>
 </dialog>
 <dialog id="cdlg">
@@ -373,7 +386,7 @@ function renderCalEd() {
   document.querySelectorAll('#calEd .pill').forEach(b => b.classList.toggle('on', b.dataset.f === calF));
   $('calTable').innerHTML = rows.length
     ? `<div class="tablewrap"><table><thead><tr><th>日期</th><th>${calF === 'birthday' ? '称呼' : '标题'}</th><th>重复</th><th>时间</th><th>备注</th><th></th></tr></thead><tbody>` +
-      rows.map(i => `<tr><td>${esc(calDateLabel(i))}</td><td><b>${esc(i.title)}</b></td><td>${REP[i.repeat] || ''}</td><td>${esc(i.time)}</td><td class="note">${esc(i.note)}</td><td><button class="link" data-cedit="${esc(i.id)}">编辑</button></td></tr>`).join('') + '</tbody></table></div>'
+      rows.map(i => `<tr><td>${esc(calDateLabel(i))}</td><td><b>${esc(i.title)}</b></td><td>${REP[i.repeat] || ''}</td><td>${esc(i.time)}</td><td class="note">${esc(i.note)}</td><td style="white-space:nowrap"><button class="link" data-cedit="${esc(i.id)}">编辑</button> <button class="link" data-pincal="${esc(i.id)}">${ntByRef('cal:' + i.id) ? '已置顶' : '置顶'}</button></td></tr>`).join('') + '</tbody></table></div>'
     : `<div class="empty" style="padding:18px">还没有${calF === 'birthday' ? '生日' : '班级事项'}，点「添加」录入。</div>`;
 }
 document.querySelectorAll('#calEd .pill').forEach(b => b.addEventListener('click', () => { calF = b.dataset.f; renderCalEd(); }));
@@ -415,7 +428,7 @@ $('cDel').addEventListener('click', async () => {
 function renderResEd() {
   $('resTable').innerHTML = resItems.length
     ? `<div class="tablewrap"><table><thead><tr><th>排序</th><th>标题</th><th>链接</th><th>说明</th><th></th></tr></thead><tbody>` +
-      resItems.map(i => `<tr><td>${i.sort}</td><td><b>${esc(i.title)}</b></td><td class="note"><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.url.length > 48 ? i.url.slice(0, 46) + '…' : i.url)}</a></td><td class="note">${esc(i.note)}</td><td><button class="link" data-redit="${esc(i.id)}">编辑</button></td></tr>`).join('') + '</tbody></table></div>'
+      resItems.map(i => `<tr><td>${i.sort}</td><td><b>${esc(i.title)}</b></td><td class="note"><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.url.length > 48 ? i.url.slice(0, 46) + '…' : i.url)}</a></td><td class="note">${esc(i.note)}</td><td style="white-space:nowrap"><button class="link" data-redit="${esc(i.id)}">编辑</button> <button class="link" data-pinres="${esc(i.id)}">${ntByRef('res:' + i.id) ? '已置顶' : '置顶'}</button></td></tr>`).join('') + '</tbody></table></div>'
     : '<div class="empty" style="padding:18px">还没有资料链接，点「添加」录入（看板会先显示页内默认的几条）。</div>';
 }
 function openRes(id) {
@@ -490,18 +503,66 @@ function openEditor(id) {
   if (!ro) $('fName').focus();
 }
 // 看板通知（公开表「通知」）：班委口令可改，看板顶部显示
-function noticeAt(at) { const d = at ? new Date(at) : null; $('noticeAt').textContent = d && !isNaN(d) ? '上次更新 ' + (d.getMonth() + 1) + '/' + d.getDate() : ''; }
-async function loadNotice() { try { const r = await apiPost({ action: 'notice', key: mkey }); if (r && r.ok) { $('noticeText').value = r.text || ''; noticeAt(r.updatedAt); } } catch (_) {} }
-$('noticeSave').addEventListener('click', async () => {
-  const b = $('noticeSave'); b.disabled = true;
-  try { const r = await apiPost({ action: 'set_notice', key: mkey, text: $('noticeText').value }); if (!r.ok) throw new Error(r.error || '保存失败'); $('noticeText').value = r.text || ''; noticeAt(r.updatedAt); toast(r.text ? '通知已更新，看板刷新即见' : '通知已清空'); }
-  catch (e) { toast('保存失败：' + e.message); }
+// 看板通知·置顶：多条，重要在前，到期自动下架；可从日历/资料一键置顶（ref=cal:<id> / res:<id>）
+let ntItems = [], ntEditing = null;
+const ymd = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+const today0 = () => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; };
+const addDays = (dt, n) => { const d = new Date(dt); d.setDate(d.getDate() + n); return d; };
+function nextOccDate(i) {   // 日历条目下一次发生的日期（农历生日页面没有换算表，退为两周）
+  const t = today0(), [y, m, d] = String(i.date).split('-').map(Number);
+  if (i.lunar) return addDays(t, 14);
+  if (i.repeat === 'weekly') { const wd = new Date(y || 2000, m - 1, d).getDay(), n = new Date(t); n.setDate(n.getDate() + (wd - n.getDay() + 7) % 7); return n; }
+  if (i.repeat === 'yearly') { let n = new Date(t.getFullYear(), m - 1, d); if (n < t) n = new Date(t.getFullYear() + 1, m - 1, d); return n; }
+  return new Date(y, m - 1, d);
+}
+const ntActive = n => !n.until || n.until >= ymd(today0());
+const ntByRef = ref => ntItems.find(n => n.ref === ref && ntActive(n));
+async function loadNotice() { try { const r = await apiPost({ action: 'notice', key: mkey, all: true }); ntItems = r && r.ok ? (r.items || (r.text ? [{ id: '', text: r.text }] : [])) : []; } catch (_) { ntItems = []; } renderNt(); renderCalEd(); renderResEd(); }
+function ntSource(n) { const r = String(n.ref || ''); if (r.startsWith('cal:')) { const c = calItems.find(x => x.id === r.slice(4)); return '日历 · ' + (c ? c.title : '（已删）'); } if (r.startsWith('res:')) { const x = resItems.find(x => x.id === r.slice(4)); return '资料 · ' + (x ? x.title : '（已删）'); } return '手填'; }
+function renderNt() {
+  const rows = [...ntItems].sort((a, b) => (ntActive(b) - ntActive(a)) || (b.important - a.important) || (a.sort - b.sort));
+  $('ntTable').innerHTML = rows.length
+    ? `<div class="tablewrap"><table><thead><tr><th></th><th>内容</th><th>说明</th><th>显示到</th><th>来源</th><th></th></tr></thead><tbody>` +
+      rows.map(n => `<tr style="${ntActive(n) ? '' : 'opacity:.5'}"><td>${n.important ? '<span class="tag" style="background:var(--warn-soft);color:var(--warn)">重要</span>' : ''}</td><td><b>${esc(n.text)}</b>${n.link ? ` <a href="${esc(n.link)}" target="_blank" rel="noopener" style="font-size:12px">链接</a>` : ''}</td><td class="note">${esc(n.note)}</td><td>${n.until ? esc(n.until.slice(5)) + (ntActive(n) ? '' : '（已过期）') : '长期'}</td><td class="note">${esc(ntSource(n))}</td><td><button class="link" data-nedit="${esc(n.id)}">编辑</button></td></tr>`).join('') + '</tbody></table></div>'
+    : '<div class="empty" style="padding:18px">还没有置顶通知。点「快捷通知」直接写一条，或在下面日历 / 资料的行上点「置顶」。</div>';
+}
+function openNt(n, preset) {
+  ntEditing = n ? n.id : null;
+  const v = n || Object.assign({ text: '', note: '', link: '', until: ymd(addDays(today0(), 14)), important: false, ref: '' }, preset || {});
+  $('nTitle').textContent = n ? '修改通知' : (v.ref ? '置顶到看板' : '快捷通知');
+  $('nText').value = v.text; $('nNote').value = v.note || ''; $('nLink').value = v.link || ''; $('nUntil').value = v.until || ''; $('nImp').checked = !!v.important;
+  $('nRef').textContent = v.ref ? '关联：' + ntSource(v) + '（看板上会自动带日期 / 链接）' : ''; $('ndlg').dataset.ref = v.ref || '';
+  $('nDel').hidden = !n; $('nDel').textContent = '下架'; $('nDel').dataset.armed = ''; $('nErr').hidden = true;
+  $('ndlg').showModal();
+}
+$('ntAdd').addEventListener('click', () => openNt(null));
+$('nclose').addEventListener('click', () => $('ndlg').close()); $('ncancel').addEventListener('click', () => $('ndlg').close());
+$('nform').addEventListener('submit', async ev => {
+  ev.preventDefault(); if (!API) return;
+  const item = { id: ntEditing || undefined, text: $('nText').value.trim(), note: $('nNote').value.trim(), link: $('nLink').value.trim(), until: $('nUntil').value, important: $('nImp').checked, ref: $('ndlg').dataset.ref || '' };
+  $('nsave').disabled = true;
+  try { const r = await apiPost({ action: 'notice_set', key: mkey, item }); if (!r.ok) throw new Error(r.error || '保存失败');
+    const k = ntItems.findIndex(x => x.id === r.item.id); if (k >= 0) ntItems[k] = r.item; else ntItems.push(r.item);
+    $('ndlg').close(); toast('已置顶，看板刷新即见'); renderNt(); renderCalEd(); renderResEd(); }
+  catch (err) { $('nErr').textContent = err?.message || '保存失败'; $('nErr').hidden = false; }
+  finally { $('nsave').disabled = false; }
+});
+$('nDel').addEventListener('click', async () => {
+  const b = $('nDel'); if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = '再点一次确认下架'; return; }
+  b.disabled = true;
+  try { const r = await apiPost({ action: 'notice_delete', key: mkey, id: ntEditing }); if (!r.ok) throw new Error(r.error); ntItems = ntItems.filter(x => x.id !== ntEditing); $('ndlg').close(); toast('已下架'); renderNt(); renderCalEd(); renderResEd(); }
+  catch (err) { $('nErr').textContent = '下架失败：' + (err?.message || ''); $('nErr').hidden = false; }
   finally { b.disabled = false; }
+});
+document.addEventListener('click', e => {
+  const ne = e.target.closest('[data-nedit]'); if (ne) { openNt(ntItems.find(x => x.id === ne.dataset.nedit)); return; }
+  const pc = e.target.closest('[data-pincal]'); if (pc) { const c = calItems.find(x => x.id === pc.dataset.pincal), ex = ntByRef('cal:' + c.id); if (ex) openNt(ex); else openNt(null, { text: c.title + (c.time ? ' ' + c.time : ''), until: ymd(nextOccDate(c)), ref: 'cal:' + c.id }); return; }
+  const pr = e.target.closest('[data-pinres]'); if (pr) { const x = resItems.find(x => x.id === pr.dataset.pinres), ex = ntByRef('res:' + x.id); if (ex) openNt(ex); else openNt(null, { text: x.title, note: x.note, link: x.url, ref: 'res:' + x.id }); }
 });
 function setMode(on) {
   manage = on;
   $('manageBtn').hidden = on; $('exitBtn').hidden = !on; $('copyBtn').hidden = !on; $('addBtn').hidden = !on;
-  $('noticeEd').hidden = !on; $('calEd').hidden = !on; $('resEd').hidden = !on; if (on) { loadNotice(); loadCal(); loadRes(); }
+  $('noticeEd').hidden = !on; $('calEd').hidden = !on; $('resEd').hidden = !on; if (on) { Promise.all([loadCal(), loadRes()]).then(loadNotice); }
   $('tab-people').hidden = !on;
   if (!on && view === 'people') document.getElementById('tab-roles').click();
   render();

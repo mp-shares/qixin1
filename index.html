@@ -7,7 +7,7 @@
 <title>栖心一班班级看板</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* Layout: sticky nav → masthead → ① 通知·近期（公开表「通知」一句话 + 日历近 30 天 chips；都空则整块不显示）② 活动照片（snap carousel；没照片时一张封面）③ 班级日历（月视图 + 当月清单；公开表「日历」）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 班级资料（公开表「资料」链接列表；后端不可用时用页内 RESOURCES_DEFAULT）⑥ 全班入口 / 义工入口. 通知/日历/资料/定岗 都由班委在 微岗位报名.html#manage 维护. Content lives in PROJECTS / STAFF / RESOURCES_DEFAULT at the top of the script. */
+/* Layout: sticky nav → masthead → ① 通知·近期（公开表「通知」多条置顶：重要在前、到期自动消失、可关联日历事项(ref cal:id，显示日期并从近期 chips 里去重)或资料(res:id) + 日历近 30 天 chips；都空则整块不显示）② 活动照片（snap carousel；没照片时一张封面）③ 班级日历（月视图 + 当月清单；公开表「日历」）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 班级资料（公开表「资料」链接列表；后端不可用时用页内 RESOURCES_DEFAULT）⑥ 全班入口 / 义工入口. 通知/日历/资料/定岗 都由班委在 微岗位报名.html#manage 维护. Content lives in PROJECTS / STAFF / RESOURCES_DEFAULT at the top of the script. */
 :root{
   --bg:#f4f5f8; --card:#ffffff; --ink:#1b2130; --muted:#6b7386; --line:#e0e4ec; --soft:#eef0f5;
   --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
@@ -66,6 +66,9 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .notice .nk{font-size:12px;letter-spacing:.12em;color:var(--accent);font-weight:700;padding-top:3px;white-space:nowrap}
 .notice p{margin:0;font-size:15.5px;line-height:1.65;min-width:0;overflow-wrap:anywhere}
 .notice small{grid-column:2;font-size:12px;color:var(--muted)}
+.notices{display:grid;gap:8px}
+.notice.imp{border-left-color:var(--out)} .notice.imp .nk{color:var(--out)}
+.notice small a{font-weight:600;text-decoration:none;margin-left:6px}
 @media (max-width:440px){ .notice{grid-template-columns:1fr} .notice small{grid-column:1} }
 
 /* ① carousel */
@@ -196,7 +199,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
 
   <section class="band" id="news" hidden>
     <h2>通知 · 近期</h2>
-    <div class="notice" id="notice" hidden><span class="nk">通知</span><p id="noticeText"></p><small id="noticeAt"></small></div>
+    <div class="notices" id="notices" hidden></div>
     <div class="soon" id="calSoon" hidden></div>
   </section>
 
@@ -286,14 +289,26 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   $('staffCards').innerHTML = STAFF.map(function (p) { return card(p, true); }).join('');
 
   // 通知栏
-  function syncNews() { $('news').hidden = $('notice').hidden && $('calSoon').hidden; }
-  function renderNotice(n) {
-    var text = n && n.text ? String(n.text).trim() : '';
-    $('notice').hidden = !text; syncNews();
-    if (!text) return;
-    $('noticeText').innerHTML = esc(text).replace(/\n/g, '<br>');
-    var at = n.updatedAt ? new Date(n.updatedAt) : null;
-    $('noticeAt').textContent = at && !isNaN(at) ? '更新于 ' + (at.getMonth() + 1) + '/' + at.getDate() : '';
+  function syncNews() { $('news').hidden = $('notices').hidden && $('calSoon').hidden; }
+  // 置顶通知：重要在前；关联日历事项的前面带日期；关联资料/带链接的给「查看」
+  var notices = [], pinnedCal = {};
+  function nextOcc(it) { var y = today0.getFullYear(), hits = occurrences(it, y, y + 1).filter(function (o) { return o.d >= today0; }); return hits.length ? hits[0].d : null; }
+  function renderNotices() {
+    pinnedCal = {};
+    var html = notices.map(function (n) {
+      var dateLbl = '', ref = String(n.ref || '');
+      if (ref.indexOf('cal:') === 0) {
+        var it = calItems.filter(function (c) { return c.id === ref.slice(4); })[0];
+        if (it) { pinnedCal[it.id] = 1; var d = nextOcc(it); if (d) dateLbl = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + WD[d.getDay()] + (it.time ? ' ' + it.time : ''); }
+      }
+      var small = [n.note ? esc(n.note) : ''].filter(Boolean).join('') + (n.link ? '<a href="' + esc(safeUrl(n.link)) + '"' + (/^https?:/.test(n.link) ? ' target="_blank" rel="noopener"' : '') + '>查看 ›</a>' : '');
+      return '<div class="notice' + (n.important ? ' imp' : '') + '"><span class="nk">' + (n.important ? '重要' : '通知') + '</span><p>' + (dateLbl ? '<b>' + esc(dateLbl) + '</b> · ' : '') + esc(n.text).replace(/\n/g, '<br>') + '</p>' + (small ? '<small>' + small + '</small>' : '') + '</div>';
+    });
+    $('notices').innerHTML = html.join(''); $('notices').hidden = !html.length; syncNews();
+  }
+  function renderNotice(r) {   // 兼容旧后端：只有 text 一条
+    notices = Array.isArray(r.items) ? r.items : (r.text ? [{ text: r.text }] : []);
+    renderNotices(); renderSoon();
   }
 
   // ① 照片轮播
@@ -380,7 +395,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   function renderSoon() {
     var end = new Date(today0); end.setDate(end.getDate() + 30);
     var occ = [], seenWeekly = {};
-    calItems.forEach(function (it) { occurrences(it, today0.getFullYear(), today0.getFullYear() + 1).forEach(function (o) { if (o.d >= today0 && o.d < end) occ.push(o); }); });
+    calItems.forEach(function (it) { if (pinnedCal[it.id]) return; occurrences(it, today0.getFullYear(), today0.getFullYear() + 1).forEach(function (o) { if (o.d >= today0 && o.d < end) occ.push(o); }); });
     occ.sort(byTime);
     occ = occ.filter(function (o) { if (o.it.repeat !== 'weekly') return true; if (seenWeekly[o.it.id]) return false; return seenWeekly[o.it.id] = true; }).slice(0, 8);
     $('calSoon').hidden = !occ.length; syncNews();
@@ -472,7 +487,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
 
   if (API) QX.ready().then(function () {
     QX.api('notice').then(function (r) { if (r && r.ok) renderNotice(r); }).catch(function () {});
-    QX.api('calendar').then(function (r) { calLoaded = true; if (r && r.ok) calItems = r.items || []; else calErr = true; renderCal(); renderSoon(); }).catch(function () { calLoaded = true; calErr = true; renderCal(); });
+    QX.api('calendar').then(function (r) { calLoaded = true; if (r && r.ok) calItems = r.items || []; else calErr = true; renderCal(); renderNotices(); renderSoon(); }).catch(function () { calLoaded = true; calErr = true; renderCal(); });
     QX.api('summary').then(function (r) { fee = r && r.ok ? r.summary : null; renderStats(); }).catch(function () {});
     QX.api('signups').then(function (r) { signups = r && r.ok ? r.people : null; assigned = (r && r.assigned) || {}; renderStats(); }).catch(function () {});
     QX.api('photos').then(function (r) { photos = r && r.ok ? (r.photos || []) : []; renderCarousel(); }).catch(function () {});
