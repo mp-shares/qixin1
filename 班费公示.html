@@ -7,7 +7,7 @@
 <title>栖心一班班费公示</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* Layout: top bar (back to dashboard) → masthead with month switcher (‹ select › · 「多月」切到 从…至… 两个下拉，合并连续几个月) → ① 本期收支（income / expense side by side, donors）② 支出明细 ③ 结余 ④ 每月收支表（rows switch month）⑤ 缴纳班费. Each month's report is stored by the backend; switching fetches that month; 多月 = 取区间内每月报告在页面上合并（收支相加、分类合并、明细拼接、供养人去重，结余/专项/累计取最后一个月）. */
+/* Layout: top bar (back to dashboard) → masthead with month switcher (‹ select › · 「多月」切到 从…至… 两个下拉，合并连续几个月) → ① 本期收支（income / expense side by side, donors）② 支出明细 ③ 结余 ④ 每月收支表（rows switch month）⑤ 班费规则（讨论稿·正文源是同目录 班费规则.md，改了要同步这里的 #rules；定稿后把 draft 标记与〔待定〕去掉）⑥ 缴纳班费. Each month's report is stored by the backend; switching fetches that month; 多月 = 取区间内每月报告在页面上合并（收支相加、分类合并、明细拼接、供养人去重，结余/专项/累计取最后一个月）. */
 :root{
   --bg:#f3f4f7; --card:#ffffff; --ink:#1b2130; --muted:#6a7284; --line:#dde1e8; --soft:#eef0f4;
   --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
@@ -107,6 +107,22 @@ h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted
 .twrap{overflow-x:auto;margin:0 -4px}
 
 .empty{color:var(--muted);font-size:13.5px;padding:6px 0}
+
+/* ⑤ 班费规则（讨论稿） */
+#rules h2 .draft{font-size:11px;letter-spacing:.04em;text-transform:none;padding:2px 9px;border-radius:999px;background:var(--out-bg);color:var(--out);font-weight:600;white-space:nowrap}
+#rules summary{cursor:pointer;font-size:14px;color:var(--accent);font-weight:600;list-style:none;display:flex;align-items:center;gap:6px}
+#rules summary::-webkit-details-marker{display:none}
+#rules summary::before{content:"›";display:inline-block;transition:transform .15s;font-size:16px}
+#rules details[open] summary::before{transform:rotate(90deg)}
+#rules summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+#rules .lead{font-size:14px;line-height:1.65;margin:0 0 10px}
+#rules .body{font-size:14px;line-height:1.7;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+#rules .body h3{font-size:14px;margin:14px 0 4px;font-weight:700}
+#rules .body h3:first-child{margin-top:0}
+#rules .body ol{margin:0;padding-left:1.4em} #rules .body li{margin:2px 0}
+#rules .body ul{margin:2px 0 0;padding-left:1.2em}
+#rules .tbd{background:var(--out-bg);color:var(--out);border-radius:4px;padding:0 5px;font-size:12.5px;font-weight:600;white-space:nowrap}
+#rules .note{font-size:12.5px;color:var(--muted);margin-top:10px}
 footer{font-size:12.5px;color:var(--muted);line-height:1.65;padding:0 4px}
 .pay{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}
 .pay img{width:150px;height:auto;border-radius:10px;border:1px solid var(--line);background:#fff}
@@ -129,6 +145,53 @@ footer{font-size:12.5px;color:var(--muted);line-height:1.65;padding:0 4px}
     <div class="mnav" id="mnav" hidden><button type="button" id="prevM" aria-label="上一个月">‹</button><select class="month" id="month" aria-label="选择月份"></select><button type="button" id="nextM" aria-label="下一个月">›</button><span class="to" id="toWrap" hidden>至<select class="month" id="monthTo" aria-label="截止月份"></select></span><button type="button" class="rng" id="rangeBtn" aria-pressed="false" title="合并连续几个月一起看">多月</button></div>
   </header>
   <main id="app" style="display:contents"><section><div class="empty">正在读取最近一期公示…</div></section></main>
+  <section id="rules">
+    <h2>班费规则<span class="draft">讨论稿 · 待班委讨论</span></h2>
+    <p class="lead">班费用于保障班级日常活动顺利开展。收支公开透明，接受全班师兄监督。</p>
+    <details>
+      <summary>展开全文</summary>
+      <div class="body">
+        <h3>一、收取</h3>
+        <ol>
+          <li><b>随喜自愿</b>：没有金额限制，也不设截止日期，随力随分。</li>
+          <li><b>方式</b>：Venmo 转账（收款码和账号见下方「缴纳班费」）。</li>
+          <li><b>备注</b>：转账时备注「姓名＋班费」。转账后私信月琴师兄告知，方便登记核对。</li>
+          <li><b>两类供养</b>
+            <ul>
+              <li><b>随喜供养</b>（默认）：不限定用途，统筹用于班级日常活动。</li>
+              <li><b>专项供养</b>：供养人指定用途（如某次活动、某项物品）的，请在转账备注里写明用途。这部分专款专用，单独记账、单独公示结余。</li>
+            </ul>
+          </li>
+        </ol>
+        <h3>二、使用范围</h3>
+        <ol>
+          <li>可用于：班级共修和活动的场地、供花供果、茶点、物料，以及其他直接服务全班的开支。<span class="tbd">待定：列举是否需要增减</span></li>
+          <li>不用于：个人消费、与班级活动无关的开支。</li>
+          <li>审批 <span class="tbd">待定</span>：单笔 $___ 以下，由经办人与记账义工确认即可支出；超过的，需班委共同商议同意。</li>
+          <li>报销：经办人垫付后，提供收据或付款截图，交记账义工登记后报销。</li>
+        </ol>
+        <h3>三、记账与核对</h3>
+        <ol>
+          <li>由月琴、听雪、一平三位师兄负责核对和记账。</li>
+          <li>每一笔收支都要登记日期、类别、金额、经手人和备注。支出要上传凭证。</li>
+          <li>账本和凭证由记账义工保管，班委可以查阅。</li>
+        </ol>
+        <h3>四、公示</h3>
+        <ol>
+          <li><b>定期公示</b>：每月在群内发一次班费公示，内容包括本月收支、结余和供养名单。<span class="tbd">待定：每月几号前</span></li>
+          <li><b>随时可查</b>：本页按月显示收支汇总、每笔支出明细和结余，往月都可以回看。</li>
+          <li>供养名单只列法名，不列金额。</li>
+          <li>对账目有疑问，可以联系班委或记账义工，查阅明细和凭证。</li>
+        </ol>
+        <h3>五、结余与交接 <span class="tbd">待定</span></h3>
+        <ol>
+          <li>学期或班级阶段结束时，班费结余如何处理（转入下期、用于结业活动、或另行商议）。</li>
+          <li>记账义工如有变更，要交接账本、凭证和收款账户，并在群内告知。</li>
+        </ol>
+        <p class="note">依据 2026-10 群内《班费收集公告》整理，2026-11-01 稿。标〔待定〕处请班委讨论后定稿。</p>
+      </div>
+    </details>
+  </section>
   <section id="pay" hidden><h2>缴纳班费</h2><div class="pay"><img id="qrImg" alt="班费收款码"><div><div class="h" id="qrName"></div><div class="acct"><span id="qrHandle"></span><button type="button" id="qrCopy">复制账号</button></div><div class="tip">Venmo 扫码或搜索账号转账，备注写<b>法名 + 班费</b>；指定用途的供养请在备注里写明用途。</div></div></div></section>
   <footer>班费收入分两类：<b>随喜供养</b>（非限定用途）与<b>专项供养</b>（指定用途，专款专用）。本页公示收支汇总与每笔支出；凭证由记账义工保管，有疑问请联系班委。</footer>
 </div>
