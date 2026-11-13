@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>栖心一班微岗位认领</title>
+<title>栖心一班 班委和微岗位</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
 <style>
-/* Layout: one column, summary tiles → tabbed views (按岗位 / 按人员) → dialog editor. 「组修时间」已于 2026-11-13 下线（分组固定后不再需要）；表里 times 列保留不显示。 Cool paper + 竹青 accent. */
+/* Layout: one column, summary tiles → tabbed views (按岗位：每岗两栏「定岗」(公开表「定岗」·班委可改) + 「报名意愿」(公开表「微岗位」) / 按人员) → dialog editor. 「组修时间」已于 2026-11-13 下线（分组固定后不再需要）；表里 times 列保留不显示。 Cool paper + 竹青 accent. */
 :root {
   --bg: #f3f4f1;
   --paper: #ffffff;
@@ -70,7 +70,12 @@ section.view[hidden] { display: none; }
 .cat { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
 .cat h2 { font-family: var(--display); font-size: 17px; font-weight: 600; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .cat h2 .sum { font-family: var(--body); font-size: 13px; color: var(--fg-2); font-weight: 400; font-variant-numeric: tabular-nums; }
-.role { display: grid; grid-template-columns: 180px 1fr; gap: 6px 16px; padding: 10px 16px; border-top: 1px solid var(--line); align-items: start; }
+.role { display: grid; grid-template-columns: 150px 1fr; gap: 6px 16px; padding: 10px 16px; border-top: 1px solid var(--line); align-items: start; }
+.eyebrow .backlink { color: var(--accent); text-decoration: none; } .eyebrow .backlink:hover { text-decoration: underline; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; min-width: 0; }
+.col .cl { font-size: 11px; color: var(--fg-2); letter-spacing: .06em; margin-bottom: 4px; }
+.chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); cursor: default; }
+.people .link { font: inherit; font-size: 12px; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0 2px; text-decoration: underline; align-self: center; }
 .role:first-of-type { border-top: 0; }
 .role .name { font-weight: 500; display: flex; align-items: baseline; gap: 8px; }
 .role .desc { grid-column: 1 / -1; color: var(--fg-2); font-size: 13px; margin-top: -4px; }
@@ -80,7 +85,7 @@ section.view[hidden] { display: none; }
 .chip { font: inherit; font-size: 13px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper-2); color: var(--fg); cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
 .vacant { font-size: 13px; color: var(--warn); }
-@media (max-width: 560px) { .role { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .role { grid-template-columns: 1fr; } .cols { grid-template-columns: 1fr; } }
 
 .tablewrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -124,8 +129,8 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
 <div class="wrap">
   <header>
     <div>
-      <div class="eyebrow">栖心一班 · 班级建设工具包</div>
-      <h1>微岗位认领</h1>
+      <div class="eyebrow">栖心一班 · 班级建设工具包 · <a href="./" class="backlink">班级看板 ›</a></div>
+      <h1>班委和微岗位</h1>
       <div class="src">岗位清单取自《静心学堂班级手册 2.0》附录一·第一组第 3 项。每人至少认领 1 项，可轮换，可多人协作。</div>
     </div>
     <div class="status" id="status"><span class="dot"></span><span id="statusText">连接中…</span></div>
@@ -133,9 +138,9 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
 
   <div class="tiles">
     <div class="tile"><div class="k">已报名</div><div class="v" id="tPeople">–<small>人</small></div></div>
-    <div class="tile"><div class="k">已有人认领</div><div class="v" id="tFilled">–<small>/ 20 岗</small></div></div>
-    <div class="tile warn"><div class="k">空缺岗位</div><div class="v" id="tVacant">–<small>岗</small></div></div>
-    <div class="tile"><div class="k">认领总次数</div><div class="v" id="tTotal">–<small>次</small></div></div>
+    <div class="tile"><div class="k">有人报名意愿</div><div class="v" id="tFilled">–<small>/ 20 岗</small></div></div>
+    <div class="tile"><div class="k">已定岗</div><div class="v" id="tTotal">–<small>/ 20 岗</small></div></div>
+    <div class="tile warn"><div class="k">待定岗</div><div class="v" id="tVacant">–<small>岗</small></div></div>
   </div>
 
   <div class="bar">
@@ -175,6 +180,17 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
       <div><button type="button" class="btn danger" id="delBtn" hidden>删除此人</button></div>
       <div class="right"><button type="button" class="btn" id="cancelBtn">取消</button><button type="submit" class="btn primary" id="saveBtn">保存</button></div>
     </div>
+  </form>
+</dialog>
+<dialog id="adlg">
+  <form id="aform" method="dialog">
+    <div class="dhead"><h3 id="aTitle">定岗</h3><button type="button" class="btn" id="aclose">关闭</button></div>
+    <div class="dbody">
+      <div class="group"><div class="lab">从已报名的同学中选</div><div class="opts" id="aOpts"></div></div>
+      <div class="field"><label class="lab" for="aExtra">其他同学（顿号或逗号分隔）</label><input type="text" id="aExtra" autocomplete="off" placeholder="不在报名名单里的同学"></div>
+      <div class="err" id="aErr" hidden></div>
+    </div>
+    <div class="dfoot"><div></div><div class="right"><button type="button" class="btn" id="acancel">取消</button><button type="submit" class="btn primary" id="asave">保存定岗</button></div></div>
   </form>
 </dialog>
 <dialog id="mdlg">
@@ -226,7 +242,8 @@ const ROLE = {}; CATS.forEach(c => c.roles.forEach(([id, name, desc]) => ROLE[id
 const TOTAL_ROLES = Object.keys(ROLE).length;
 
 const API = (window.BANFEI_API || '').trim();
-let people = [], editingId = null, view = 'roles', manage = false, mkey = '';
+let people = [], assigned = {}, assigningRole = null, editingId = null, view = 'roles', manage = false, mkey = '';
+const assignedOf = r => assigned[r] || [];
 try { mkey = localStorage.getItem('wgw-key') || ''; } catch (_) {}
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -242,19 +259,21 @@ function render() {
   let total = 0;
   ps.forEach(p => (p.roles || []).forEach(r => { if (byRole[r]) { byRole[r].push(p); total++; } }));
   const filled = Object.values(byRole).filter(a => a.length).length;
+  const nAssigned = Object.keys(ROLE).filter(r => assignedOf(r).length).length;
   $('tPeople').innerHTML = ps.length + '<small>人</small>';
   $('tFilled').innerHTML = filled + '<small>/ ' + TOTAL_ROLES + ' 岗</small>';
-  $('tVacant').innerHTML = (TOTAL_ROLES - filled) + '<small>岗</small>';
-  $('tTotal').innerHTML = total + '<small>次</small>';
+  $('tTotal').innerHTML = nAssigned + '<small>/ ' + TOTAL_ROLES + ' 岗</small>';
+  $('tVacant').innerHTML = (TOTAL_ROLES - nAssigned) + '<small>岗</small>';
 
   // 按岗位
   $('view-roles').innerHTML = CATS.map(c => {
-    const catFilled = c.roles.filter(([id]) => byRole[id].length).length;
-    return `<div class="cat"><h2><span>${c.name}</span><span class="sum">${catFilled} / ${c.roles.length} 岗有人 · ${c.roles.reduce((n, [id]) => n + byRole[id].length, 0)} 次认领</span></h2>` +
+    const catAssigned = c.roles.filter(([id]) => assignedOf(id).length).length;
+    return `<div class="cat"><h2><span>${c.name}</span><span class="sum">${catAssigned} / ${c.roles.length} 岗已定 · ${c.roles.reduce((n, [id]) => n + byRole[id].length, 0)} 人次有意愿</span></h2>` +
       c.roles.map(([id, name, desc]) => {
-        const list = byRole[id];
-        return `<div class="role"><div class="name"><span>${name}</span><span class="count ${list.length ? '' : 'zero'}">${list.length}</span></div>` +
-          `<div class="people">${list.length ? list.map(p => chip(p)).join('') : '<span class="vacant">空缺</span>'}</div>` +
+        const list = byRole[id], asg = assignedOf(id);
+        return `<div class="role"><div class="name"><span>${name}</span><span class="count ${asg.length ? '' : 'zero'}">${asg.length ? '已定岗' : '待定'}</span></div>` +
+          `<div class="cols"><div class="col"><div class="cl">定岗</div><div class="people">${asg.map(n => `<span class="chip on">${esc(n)}</span>`).join('') || '<span class="vacant">待定</span>'}${manage ? `<button class="link" data-assign="${id}">编辑</button>` : ''}</div></div>` +
+          `<div class="col"><div class="cl">报名意愿 · ${list.length}</div><div class="people">${list.length ? list.map(p => chip(p)).join('') : '<span class="vacant">暂无</span>'}</div></div></div>` +
           `<div class="desc">${desc}</div></div>`;
       }).join('') + '</div>';
   }).join('');
@@ -287,6 +306,27 @@ document.querySelectorAll('.tabs button').forEach(btn => btn.addEventListener('c
   try { localStorage.setItem('wgw-view', view); } catch (_) {}
 }));
 try { const v = localStorage.getItem('wgw-view'); if (v && v !== 'time') document.querySelector(`.tabs button[data-view="${v}"]`)?.click(); } catch (_) {}
+
+// 定岗编辑（班委）：从报名同学中勾选，或手填其他同学
+function openAssign(role) {
+  assigningRole = role; const cur = assignedOf(role), names = sortedPeople().map(p => p.name);
+  $('aTitle').textContent = '定岗 · ' + ROLE[role].name;
+  $('aOpts').innerHTML = names.map(n => `<label class="opt"><input type="checkbox" name="an" value="${esc(n)}"${cur.includes(n) ? ' checked' : ''}>${esc(n)}</label>`).join('') || '<span class="vacant">还没有报名记录</span>';
+  $('aExtra').value = cur.filter(n => !names.includes(n)).join('、');
+  $('aErr').hidden = true; $('adlg').showModal();
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-assign]'); if (b && manage) openAssign(b.dataset.assign); });
+$('aclose').addEventListener('click', () => $('adlg').close()); $('acancel').addEventListener('click', () => $('adlg').close());
+$('aform').addEventListener('submit', async ev => {
+  ev.preventDefault(); if (!API || !assigningRole) return;
+  const picked = [...document.querySelectorAll('#aOpts input:checked')].map(i => i.value);
+  const extra = $('aExtra').value.split(/[、,，;；\s]+/).map(x => x.trim()).filter(Boolean);
+  const names = [...new Set(picked.concat(extra))];
+  $('asave').disabled = true;
+  try { const r = await apiPost({ action: 'assign_set', key: mkey, role: assigningRole, names }); if (!r.ok) throw new Error(r.error || '保存失败'); assigned[assigningRole] = r.names || names; $('adlg').close(); toast('已更新定岗'); render(); }
+  catch (err) { $('aErr').textContent = err?.message || '保存失败'; $('aErr').hidden = false; }
+  finally { $('asave').disabled = false; }
+});
 
 // Editor
 $('fRoles').innerHTML = CATS.map(c => `<div class="group"><h4>${c.name}</h4><div class="opts">${c.roles.map(([id, name]) => `<label class="opt" title="${ROLE[id].desc}"><input type="checkbox" name="role" value="${id}">${name}</label>`).join('')}</div></div>`).join('');
@@ -390,10 +430,10 @@ $('delBtn').addEventListener('click', async () => {
 // Copy summary
 $('copyBtn').addEventListener('click', async () => {
   const ps = sortedPeople();
-  const lines = ['栖心一班 微岗位认领统计（' + new Date().toLocaleDateString('zh-CN') + '）', '已报名 ' + ps.length + ' 人', ''];
+  const lines = ['栖心一班 班委和微岗位（' + new Date().toLocaleDateString('zh-CN') + '）', '已定岗 ' + Object.keys(ROLE).filter(r => assignedOf(r).length).length + ' / ' + TOTAL_ROLES + ' 岗 · ' + ps.length + ' 人提交了报名意愿', ''];
   CATS.forEach(c => {
     lines.push('【' + c.name + '】');
-    c.roles.forEach(([id, name]) => { const names = ps.filter(p => (p.roles || []).includes(id)).map(p => p.name); lines.push('  ' + name + '：' + (names.length ? names.join('、') : '（空缺）')); });
+    c.roles.forEach(([id, name]) => { const names = ps.filter(p => (p.roles || []).includes(id)).map(p => p.name), asg = assignedOf(id); lines.push('  ' + name + '：定岗 ' + (asg.length ? asg.join('、') : '（待定）') + '；意愿 ' + (names.length ? names.join('、') : '（无）')); });
     lines.push('');
   });
   const text = lines.join('\n');
@@ -412,7 +452,7 @@ async function apiPost(body) {
 async function load() {
   const r = (manage || location.hash === '#manage') && mkey ? await apiPost({ action: 'signups', key: mkey }) : await QX.api('signups');
   if (!r.ok) throw new Error(r.error || '读取失败');
-  people = r.people || []; render(); setStatus('on', '已连接 · ' + people.length + ' 人');
+  people = r.people || []; assigned = r.assigned || {}; render(); setStatus('on', '已连接 · ' + people.length + ' 人');
 }
 render();
 if (!API) { setStatus('ro', '未配置后端 · 只读'); $('manageBtn').disabled = true; }
