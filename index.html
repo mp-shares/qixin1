@@ -7,11 +7,11 @@
 <title>栖心一班班级看板</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* Layout: sticky nav → masthead → 通知栏（班委在微岗位管理页改，留空不显示）→ ① 活动照片（snap carousel；没照片时一张封面）② 班级公示（班费一卡 + 微岗位一卡）③ 全班入口 / 义工入口. Content lives in PROJECTS / STAFF at the top of the script. */
+/* Layout: sticky nav → masthead → 通知栏（班委在微岗位管理页改，留空不显示）→ ① 活动照片（snap carousel；没照片时一张封面）② 练习 ③ 班级日历（近 30 天提醒 + 月视图；数据来自公开表「日历」，班委可直接在表里改）④ 班级公示（班费一卡 + 微岗位一卡）⑤ 全班入口 / 义工入口. Content lives in PROJECTS / STAFF at the top of the script. */
 :root{
   --bg:#f4f5f8; --card:#ffffff; --ink:#1b2130; --muted:#6b7386; --line:#e0e4ec; --soft:#eef0f5;
   --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
-  --in:#1d7a4e; --in-bg:#e3f3ea; --out:#b6412b; --lock:#8a6a1a; --lock-bg:#faf1d8; --lock-band:#f8f3e6;
+  --in:#1d7a4e; --in-bg:#e3f3ea; --out:#b6412b; --lock:#8a6a1a; --lock-bg:#faf1d8; --lock-band:#f8f3e6; --bday:#b8506e; --bday-bg:#fbe7ee;
   --shadow:0 1px 2px rgba(20,25,40,.05),0 8px 24px -12px rgba(20,25,40,.18);
   --display:'Noto Serif SC','Songti SC','SimSun',serif;
   --body:system-ui,-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
@@ -20,12 +20,12 @@
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#12151c; --card:#1b1f29; --ink:#e7e9ef; --muted:#9aa3b5; --line:#2c3341; --soft:#232835;
   --accent:#9aa7f3; --accent-ink:#10142a; --accent-soft:#242a45; --accent-deep:#c3cbfa;
-  --in:#62cf93; --in-bg:#163322; --out:#f29078; --lock:#e2c15c; --lock-bg:#3a3116; --lock-band:#1d1a14;
+  --in:#62cf93; --in-bg:#163322; --out:#f29078; --lock:#e2c15c; --lock-bg:#3a3116; --lock-band:#1d1a14; --bday:#f29ab6; --bday-bg:#3d2230;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.6); color-scheme:dark } }
 :root[data-theme="dark"]{
   --bg:#12151c; --card:#1b1f29; --ink:#e7e9ef; --muted:#9aa3b5; --line:#2c3341; --soft:#232835;
   --accent:#9aa7f3; --accent-ink:#10142a; --accent-soft:#242a45; --accent-deep:#c3cbfa;
-  --in:#62cf93; --in-bg:#163322; --out:#f29078; --lock:#e2c15c; --lock-bg:#3a3116; --lock-band:#1d1a14;
+  --in:#62cf93; --in-bg:#163322; --out:#f29078; --lock:#e2c15c; --lock-bg:#3a3116; --lock-band:#1d1a14; --bday:#f29ab6; --bday-bg:#3d2230;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.6); color-scheme:dark }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -45,7 +45,7 @@ nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:2px}
 nav.top a.nl{color:var(--muted);text-decoration:none;font-size:14px;padding:6px 11px;border-radius:999px;white-space:nowrap;transition:background .15s,color .15s}
 nav.top a.nl:hover,nav.top a.nl.on{background:var(--accent-soft);color:var(--accent-deep)}
 nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media (max-width:440px){ nav.top .brand small{display:none} nav.top a.nl{padding:6px 8px;font-size:13px} }
+@media (max-width:440px){ nav.top .brand small{display:none} nav.top a.nl{padding:6px 7px;font-size:13px} nav.top ul{gap:0} }
 
 /* masthead */
 .wrap{max-width:720px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:30px;padding-top:26px}
@@ -92,7 +92,40 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dots button[aria-current="true"]{background:var(--accent);width:20px;border-radius:4px}
 .dots button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* ② stat cards */
+/* ③ 班级日历：近期提醒条 + 月视图（周一起）+ 当月清单 */
+.soon{display:flex;gap:8px;flex-wrap:wrap}
+.soon span{font-size:13px;padding:5px 11px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--ink);display:inline-flex;gap:7px;align-items:center;min-width:0}
+.soon span b{font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;font-size:12.5px;white-space:nowrap}
+.soon span i{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
+.soon span.b{border-color:color-mix(in srgb,var(--bday) 45%,var(--line))} .soon span.b i{background:var(--bday)}
+.cal{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px 12px;box-shadow:var(--shadow);display:grid;gap:10px;min-width:0}
+.cal-head{display:flex;align-items:center;gap:6px}
+.cal-head b{font-family:var(--display);font-size:18px;font-weight:700;margin-right:auto;font-variant-numeric:tabular-nums}
+.cal-head button{font:inherit;font-size:13px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:4px 11px;cursor:pointer;line-height:1.3;min-width:34px}
+.cal-head button:hover{background:var(--soft)} .cal-head button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.cal-grid .wd{font-size:11px;letter-spacing:.06em;color:var(--muted);text-align:center;padding:2px 0 4px;font-weight:600}
+.cal-grid .day{height:46px;border-radius:10px;display:grid;place-items:center;align-content:center;gap:3px;font-size:14px;font-variant-numeric:tabular-nums;color:var(--ink);border:1px solid transparent;background:none;padding:0;font-family:inherit}
+.cal-grid .day.out{color:var(--muted);opacity:.45}
+.cal-grid .day.today{border-color:var(--accent);font-weight:700;color:var(--accent-deep)}
+.cal-grid .day.has{cursor:pointer;background:var(--soft)} .cal-grid .day.has:hover{border-color:var(--line)}
+.cal-grid .day.sel{background:var(--accent-soft);border-color:var(--accent)}
+.cal-grid .day:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cal-grid .marks{display:flex;gap:3px;height:6px}
+.cal-grid .marks i{width:6px;height:6px;border-radius:50%;background:var(--accent);display:block}
+.cal-grid .marks i.b{background:var(--bday)}
+.cal-list{display:grid;border-top:1px solid var(--line);padding-top:6px}
+.cal-list .it{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:10px;align-items:baseline;padding:7px 6px;font-size:14px;border-radius:8px}
+.cal-list .it.sel{background:var(--accent-soft)}
+.cal-list .dt{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;white-space:nowrap;min-width:64px}
+.cal-list .tag{font-size:11px;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent-deep);white-space:nowrap}
+.cal-list .tag.b{background:var(--bday-bg);color:var(--bday)}
+.cal-list .tt{min-width:0;overflow-wrap:anywhere} .cal-list .tt small{color:var(--muted);margin-left:6px;font-size:12.5px}
+.cal-list .empty{color:var(--muted);font-size:13.5px;padding:6px 6px}
+.cal-list .all{justify-self:start;font:inherit;font-size:13px;color:var(--accent);background:none;border:0;padding:6px;cursor:pointer;font-weight:600}
+.cal-list .all:hover{text-decoration:underline}
+
+/* ④ stat cards */
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:stretch}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:grid;align-content:start;gap:6px;min-width:0;box-shadow:var(--shadow)}
 .stat.hero{background:linear-gradient(135deg,var(--accent-soft),var(--card) 60%)}
@@ -127,7 +160,7 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .stat .mini .tr b.o{background:var(--out)}
 .stat .mini .amt{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
 
-/* ③ ④ side by side on wide screens, stacked on phones; plain link lists, no boxes */
+/* ⑤ side by side on wide screens, stacked on phones; plain link lists, no boxes */
 .two-up{display:grid;grid-template-columns:minmax(0,1fr);gap:30px;min-width:0}
 @media (min-width:640px){ .two-up{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:start} }
 .list{display:grid;grid-template-columns:minmax(0,1fr)}
@@ -148,6 +181,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     <ul>
       <li><a class="nl" href="#photos" data-nav="photos">照片</a></li>
       <li><a class="nl" href="#practice" data-nav="practice">练习</a></li>
+      <li><a class="nl" href="#cal" data-nav="cal">日历</a></li>
       <li><a class="nl" href="#show" data-nav="show">公示</a></li>
       <li><a class="nl" href="#links" data-nav="links">入口</a></li>
     </ul>
@@ -175,6 +209,16 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     <div class="list" id="practiceCards"></div>
   </section>
 
+  <section class="band" id="cal">
+    <h2>班级日历 <small>生日 · 班级事项</small></h2>
+    <div class="soon" id="calSoon" hidden></div>
+    <div class="cal">
+      <div class="cal-head"><b id="calTitle"></b><button type="button" id="calPrev" aria-label="上个月">‹</button><button type="button" id="calToday">今天</button><button type="button" id="calNext" aria-label="下个月">›</button></div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-list" id="calList" aria-live="polite"></div>
+    </div>
+  </section>
+
   <section class="band" id="show">
     <h2>班级公示</h2>
     <div class="stats" id="stats"></div>
@@ -199,7 +243,8 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
 (function () {
   /* 内容配置（维护者看，不显示）：PRACTICE 利他禅修练习 {t,d,url}；PROJECTS 全班入口 {t,d,url}；STAFF 义工入口 {t,d,url,who,key}。
      轮播照片：Drive「DC1班活动图片归档/看板轮播」有图优先，否则自动取最新活动的精选或最新几张；都没有就显示封面。
-     通知栏：公开表「通知」，班委在 微岗位报名.html#manage 顶部修改。公示数字：账本「公示」页发布（记账时勾选同步会自动发）。 */
+     通知栏：公开表「通知」，班委在 微岗位报名.html#manage 顶部修改。公示数字：账本「公示」页发布（记账时勾选同步会自动发）。
+     班级日历：公开表「日历」每行一条（id, kind birthday|event, title, date YYYY-MM-DD 年不明填 0000, lunar 1=农历, repeat yearly|weekly|none, time, note），班委直接在表里增改；页面只显示月/日。 */
   var PROJECTS = [
     { t: '班费公示', d: '每月收支、供养名单、结余，往月可回看。', url: '班费公示.html' },
     { t: '微岗位认领', d: '20 个微岗位谁在承担，各组修时间谁方便。', url: '微岗位报名.html' },
@@ -223,7 +268,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   var dateStr = now.getFullYear() + ' 年 ' + (now.getMonth() + 1) + ' 月 ' + now.getDate() + ' 日 · ' + WD[now.getDay()];
   $('today').textContent = dateStr;
 
-  // ③ 入口
+  // ⑤ 入口
   var card = function (p, lock) {
     var ext = /^https?:/.test(p.url);
     var tag = lock ? '<span class="tag">' + esc(p.who) + ' · ' + esc(p.key) + '</span>' : '';
@@ -253,7 +298,102 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   var COVER = '<div class="slide cover"><div class="k">MindfulPeace · 静心学堂</div><div class="t">栖心一班</div><div class="d">' + esc(dateStr) + '</div></div>';
   function slides() { return photos.length ? photos.map(photoSlide) : [COVER]; }
 
-  // ② 公示卡片
+  // ③ 班级日历（公开表「日历」· action=calendar）：生日只显示月/日；农历生日每年按农历换算（表 LUNAR 由 lunardate 生成，覆盖 2020–2098）
+  var LUNAR={2020:[125,4,5422],2021:[212,0,1366],2022:[201,0,2741],2023:[122,2,5554],2024:[210,0,1746],2025:[129,6,3749],2026:[217,0,1829],2027:[206,0,1611],2028:[126,5,3223],2029:[213,0,3243],2030:[203,0,1370],2031:[123,3,2774],2032:[211,0,2921],2033:[131,11,5970],2034:[219,0,2898],2035:[208,0,2853],2036:[128,6,6731],2037:[215,0,2635],2038:[204,0,1195],2039:[124,5,1371],2040:[212,0,1453],2041:[201,0,2922],2042:[122,2,6994],2043:[210,0,3474],2044:[130,7,7461],2045:[217,0,3365],2046:[206,0,2645],2047:[126,5,5293],2048:[214,0,1206],2049:[202,0,1461],2050:[123,3,3498],2051:[211,0,3785],2052:[201,8,7826],2053:[219,0,3730],2054:[208,0,3366],2055:[128,6,2646],2056:[215,0,2647],2057:[204,0,1366],2058:[124,4,1749],2059:[212,0,1877],2060:[202,0,1865],2061:[121,3,3731],2062:[209,0,1683],2063:[129,7,5419],2064:[217,0,1323],2065:[205,0,2651],2066:[126,5,5466],2067:[214,0,1386],2068:[203,0,2917],2069:[123,4,5962],2070:[211,0,2890],2071:[131,8,6805],2072:[219,0,2709],2073:[207,0,1325],2074:[127,6,2733],2075:[215,0,2741],2076:[205,0,1450],2077:[124,4,2981],2078:[212,0,3493],2079:[202,0,3402],2080:[122,3,7317],2081:[209,0,3222],2082:[129,7,6478],2083:[217,0,1366],2084:[206,0,2741],2085:[126,5,5554],2086:[214,0,1746],2087:[203,0,3749],2088:[124,4,3658],2089:[210,0,1675],2090:[130,8,3223],2091:[218,0,1195],2092:[207,0,1371],2093:[127,6,2774],2094:[215,0,2922],2095:[205,0,1874],2096:[125,4,5925],2097:[212,0,2885],2098:[201,0,2699]};
+  // LUNAR[y]=[正月初一 MMDD, 闰月(0 无), 月长掩码：第 i 个月(含闰月顺序计)为 30 天则第 i 位为 1]；忽略闰月；该月只有 29 天而日=30 时取 29
+  function lunarToSolar(y, m, d) {
+    var info = LUNAR[y]; if (!info) return null;
+    var dt = new Date(y, Math.floor(info[0] / 100) - 1, info[0] % 100), leap = info[1], mask = info[2], off = 0, idx = 0;
+    for (var mm = 1; mm < m; mm++) { off += (mask >> idx & 1) ? 30 : 29; idx++; if (mm === leap) { off += (mask >> idx & 1) ? 30 : 29; idx++; } }
+    var len = (mask >> idx & 1) ? 30 : 29;
+    dt.setDate(dt.getDate() + off + Math.min(d, len) - 1);
+    return dt;
+  }
+  var LM = ['正月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '腊月'];
+  var LD = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十', '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'];
+  var lunarName = function (m, d) { return (LM[m - 1] || '') + (LD[d - 1] || ''); };
+  var calItems = [], calErr = false, calLoaded = false, view = new Date(now.getFullYear(), now.getMonth(), 1), selDay = null;
+  var today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var sameDay = function (a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); };
+  // 一条记录在公历 y0..y1 年内的全部日期
+  function occurrences(it, y0, y1) {
+    var p = String(it.date || '').split('-'), Y = +p[0] || 0, M = +p[1], D = +p[2], out = [];
+    if (!M || !D) return out;
+    for (var y = y0; y <= y1; y++) {
+      if (it.repeat === 'weekly') {
+        var start = new Date(Y || 1900, M - 1, D), dt = new Date(y, 0, 1);
+        dt.setDate(dt.getDate() + (start.getDay() - dt.getDay() + 7) % 7);
+        for (; dt.getFullYear() === y; dt.setDate(dt.getDate() + 7)) if (dt >= start) out.push({ d: new Date(dt), it: it });
+      } else if (it.lunar) {
+        [y - 1, y].forEach(function (ly) { var s = lunarToSolar(ly, M, D); if (s && s.getFullYear() === y) out.push({ d: s, it: it }); });
+      } else if (it.repeat === 'yearly') { if (!Y || y >= Y) out.push({ d: new Date(y, M - 1, D), it: it }); }
+      else if (Y === y) out.push({ d: new Date(y, M - 1, D), it: it });
+    }
+    return out;
+  }
+  var byTime = function (a, b) { return a.d - b.d || (a.it.kind === 'birthday' ? 1 : 0) - (b.it.kind === 'birthday' ? 1 : 0) || (a.it.time || '').localeCompare(b.it.time || ''); };
+  function itemHtml(o, withDate) {
+    var it = o.it, b = it.kind === 'birthday', p = it.date.split('-');
+    var tm = /^\d{1,2}:\d{2}$/.test(it.time || '') ? it.time : '';   // 表里被转成时间对象的脏值不显示
+    var sub = b ? (it.lunar ? '农历' + lunarName(+p[1], +p[2]) : '') : [tm, it.note].filter(Boolean).join(' · ');
+    var dt = withDate ? '<span class="dt">' + (withDate === true ? (o.d.getMonth() + 1) + '/' + o.d.getDate() + ' ' + WD[o.d.getDay()] : esc(withDate)) + '</span>' : '';
+    return '<div class="it' + (selDay && sameDay(o.d, selDay) ? ' sel' : '') + '">' + dt + '<span class="tag' + (b ? ' b' : '') + '">' + (b ? '生日' : (it.repeat === 'weekly' ? '每周' : '事项')) + '</span><span class="tt">' + esc(it.title) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span></div>';
+  }
+  function renderCal() {
+    var y = view.getFullYear(), m = view.getMonth();
+    $('calTitle').textContent = y + ' 年 ' + (m + 1) + ' 月';
+    var occ = [];
+    calItems.forEach(function (it) { occurrences(it, y, y).forEach(function (o) { if (o.d.getMonth() === m) occ.push(o); }); });
+    occ.sort(byTime);
+    var byDay = {};
+    occ.forEach(function (o) { (byDay[o.d.getDate()] = byDay[o.d.getDate()] || []).push(o); });
+    var lead = (new Date(y, m, 1).getDay() + 6) % 7, dim = new Date(y, m + 1, 0).getDate(), prevDim = new Date(y, m, 0).getDate();
+    var cells = Math.ceil((lead + dim) / 7) * 7, html = ['一', '二', '三', '四', '五', '六', '日'].map(function (w) { return '<div class="wd">' + w + '</div>'; });
+    for (var i = 0; i < cells; i++) {
+      var n = i - lead + 1;
+      if (n < 1 || n > dim) { html.push('<div class="day out">' + (n < 1 ? prevDim + n : n - dim) + '</div>'); continue; }
+      var d = new Date(y, m, n), list = byDay[n] || [], kinds = {};
+      list.forEach(function (o) { kinds[o.it.kind === 'birthday' ? 'b' : 'e'] = 1; });
+      var cls = 'day' + (sameDay(d, today0) ? ' today' : '') + (list.length ? ' has' : '') + (selDay && sameDay(d, selDay) ? ' sel' : '');
+      var marks = list.length ? '<span class="marks">' + (kinds.b ? '<i class="b"></i>' : '') + (kinds.e ? '<i></i>' : '') + '</span>' : '';
+      html.push(list.length ? '<button type="button" class="' + cls + '" data-d="' + n + '" aria-label="' + (m + 1) + '月' + n + '日，' + list.length + ' 项">' + n + marks + '</button>' : '<div class="' + cls + '">' + n + '</div>');
+    }
+    $('calGrid').innerHTML = html.join('');
+    // 清单：每周重复的事项整月只列一行（格子里仍每周打点）；点了某天就只看那天
+    var sel = selDay && selDay.getFullYear() === y && selDay.getMonth() === m;
+    var shown = sel ? occ.filter(function (o) { return sameDay(o.d, selDay); }) : occ.filter(function (o) { return o.it.repeat !== 'weekly'; });
+    var weekly = {}, out = [];
+    if (!sel) occ.forEach(function (o) { if (o.it.repeat === 'weekly' && !weekly[o.it.id]) { weekly[o.it.id] = 1; out.push(itemHtml(o, '每' + WD[o.d.getDay()])); } });
+    out = out.concat(shown.map(function (o) { return itemHtml(o, true); }));
+    if (!out.length) out.push('<div class="empty">' + (calErr ? '日程暂时加载不了，请稍后刷新。' : calLoaded ? '本月没有生日或班级事项。' : '加载中…') + '</div>');
+    if (sel) out.push('<button type="button" class="all" id="calAll">看整月 ›</button>');
+    $('calList').innerHTML = out.join('');
+  }
+  function renderSoon() {
+    var end = new Date(today0); end.setDate(end.getDate() + 30);
+    var occ = [], seenWeekly = {};
+    calItems.forEach(function (it) { occurrences(it, today0.getFullYear(), today0.getFullYear() + 1).forEach(function (o) { if (o.d >= today0 && o.d < end) occ.push(o); }); });
+    occ.sort(byTime);
+    occ = occ.filter(function (o) { if (o.it.repeat !== 'weekly') return true; if (seenWeekly[o.it.id]) return false; return seenWeekly[o.it.id] = true; }).slice(0, 8);
+    $('calSoon').hidden = !occ.length;
+    $('calSoon').innerHTML = occ.map(function (o) {
+      var days = Math.round((o.d - today0) / 864e5), when = days === 0 ? '今天' : days === 1 ? '明天' : (o.d.getMonth() + 1) + '/' + o.d.getDate() + ' ' + WD[o.d.getDay()];
+      var b = o.it.kind === 'birthday';
+      return '<span class="' + (b ? 'b' : '') + '"><i></i><b>' + when + '</b>' + esc(o.it.title) + (b ? ' 生日' : (/^\d{1,2}:\d{2}$/.test(o.it.time || '') ? ' ' + esc(o.it.time) : '')) + '</span>';
+    }).join('');
+  }
+  $('calPrev').addEventListener('click', function () { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); selDay = null; renderCal(); });
+  $('calNext').addEventListener('click', function () { view = new Date(view.getFullYear(), view.getMonth() + 1, 1); selDay = null; renderCal(); });
+  $('calToday').addEventListener('click', function () { view = new Date(now.getFullYear(), now.getMonth(), 1); selDay = null; renderCal(); });
+  $('calGrid').addEventListener('click', function (e) {
+    var b = e.target.closest('button.day'); if (!b) return;
+    var d = new Date(view.getFullYear(), view.getMonth(), +b.dataset.d);
+    selDay = selDay && sameDay(selDay, d) ? null : d; renderCal();
+  });
+  $('calList').addEventListener('click', function (e) { if (e.target.closest('#calAll')) { selDay = null; renderCal(); } });
+  renderCal();
+
+  // ④ 公示卡片
   function renderStats() {
     var out = [];
     if (fee) {
@@ -321,6 +461,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
 
   if (API) QX.ready().then(function () {
     QX.api('notice').then(function (r) { if (r && r.ok) renderNotice(r); }).catch(function () {});
+    QX.api('calendar').then(function (r) { calLoaded = true; if (r && r.ok) calItems = r.items || []; else calErr = true; renderCal(); renderSoon(); }).catch(function () { calLoaded = true; calErr = true; renderCal(); });
     QX.api('summary').then(function (r) { fee = r && r.ok ? r.summary : null; renderStats(); }).catch(function () {});
     QX.api('signups').then(function (r) { signups = r && r.ok ? r.people : null; renderStats(); }).catch(function () {});
     QX.api('photos').then(function (r) { photos = r && r.ok ? (r.photos || []) : []; renderCarousel(); }).catch(function () {});
@@ -330,7 +471,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   var links = document.querySelectorAll('nav.top a[data-nav]');
   if ('IntersectionObserver' in window) {
     var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) links.forEach(function (a) { a.classList.toggle('on', a.dataset.nav === e.target.id); }); }); }, { rootMargin: '-40% 0px -55% 0px' });
-    ['photos', 'practice', 'show', 'links'].forEach(function (id) { io.observe($(id)); });
+    ['photos', 'practice', 'cal', 'show', 'links'].forEach(function (id) { io.observe($(id)); });
   }
 })();
 </script>
