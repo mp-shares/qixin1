@@ -279,7 +279,9 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     return '<a class="row" href="' + esc(p.url) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '><span class="t">' + esc(p.t) + '</span><span class="go">' + (ext ? '↗' : '›') + '</span><span class="d">' + esc(p.d) + tag + '</span></a>';
   };
   $('projectCards').innerHTML = PROJECTS.map(function (p) { return card(p, false); }).join('');
-  function renderRes(items) { $('resCards').innerHTML = (items.length ? items : RESOURCES_DEFAULT).map(function (r) { return card({ t: r.title, d: r.note, url: r.url }, false); }).join(''); }
+  // 资料链接只放行 http(s) 和本站相对路径（表可被直接手改，后端校验之外再挡一层 javascript: 之类）
+  var safeUrl = function (u) { u = String(u || '').trim(); return /^(https?:\/\/|[^:]*$)/i.test(u) ? u : '#'; };
+  function renderRes(items) { $('resCards').innerHTML = (items.length ? items : RESOURCES_DEFAULT).map(function (r) { return card({ t: r.title, d: r.note, url: safeUrl(r.url) }, false); }).join(''); }
   renderRes([]);
   $('staffCards').innerHTML = STAFF.map(function (p) { return card(p, true); }).join('');
 
