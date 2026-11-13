@@ -7,7 +7,7 @@
 <title>栖心一班班级看板</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* Layout: sticky nav → masthead → 通知栏（班委在微岗位管理页改，留空不显示）→ ① 活动照片（snap carousel；没照片时一张封面）② 练习 ③ 班级日历（近 30 天提醒 + 月视图；数据来自公开表「日历」，班委可直接在表里改）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 全班入口 / 义工入口. Content lives in PROJECTS / STAFF at the top of the script. */
+/* Layout: sticky nav → masthead → ① 通知·近期（公开表「通知」一句话 + 日历近 30 天 chips；都空则整块不显示）② 活动照片（snap carousel；没照片时一张封面）③ 班级日历（月视图 + 当月清单；公开表「日历」）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 班级资料（公开表「资料」链接列表；后端不可用时用页内 RESOURCES_DEFAULT）⑥ 全班入口 / 义工入口. 通知/日历/资料/定岗 都由班委在 微岗位报名.html#manage 维护. Content lives in PROJECTS / STAFF / RESOURCES_DEFAULT at the top of the script. */
 :root{
   --bg:#f4f5f8; --card:#ffffff; --ink:#1b2130; --muted:#6b7386; --line:#e0e4ec; --soft:#eef0f5;
   --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
@@ -180,9 +180,9 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     <a class="brand" href="#top"><span class="seal">栖</span>栖心一班<small>班级看板</small></a>
     <ul>
       <li><a class="nl" href="#photos" data-nav="photos">照片</a></li>
-      <li><a class="nl" href="#practice" data-nav="practice">练习</a></li>
       <li><a class="nl" href="#cal" data-nav="cal">日历</a></li>
       <li><a class="nl" href="#show" data-nav="show">公示</a></li>
+      <li><a class="nl" href="#res" data-nav="res">资料</a></li>
       <li><a class="nl" href="#links" data-nav="links">入口</a></li>
     </ul>
   </div>
@@ -194,7 +194,11 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     <div class="date" id="today"></div>
   </header>
 
-  <div class="notice" id="notice" hidden><span class="nk">通知</span><p id="noticeText"></p><small id="noticeAt"></small></div>
+  <section class="band" id="news" hidden>
+    <h2>通知 · 近期</h2>
+    <div class="notice" id="notice" hidden><span class="nk">通知</span><p id="noticeText"></p><small id="noticeAt"></small></div>
+    <div class="soon" id="calSoon" hidden></div>
+  </section>
 
   <section class="band" id="photos">
     <h2>活动照片</h2>
@@ -204,14 +208,8 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     </div>
   </section>
 
-  <section class="band" id="practice">
-    <h2>利他禅修 · 日常练习</h2>
-    <div class="list" id="practiceCards"></div>
-  </section>
-
   <section class="band" id="cal">
     <h2>班级日历 <small>生日 · 班级事项</small></h2>
-    <div class="soon" id="calSoon" hidden></div>
     <div class="cal">
       <div class="cal-head"><b id="calTitle"></b><button type="button" id="calPrev" aria-label="上个月">‹</button><button type="button" id="calToday">今天</button><button type="button" id="calNext" aria-label="下个月">›</button></div>
       <div class="cal-grid" id="calGrid"></div>
@@ -222,6 +220,11 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   <section class="band" id="show">
     <h2>班级公示</h2>
     <div class="stats" id="stats"></div>
+  </section>
+
+  <section class="band" id="res">
+    <h2>班级资料</h2>
+    <div class="list" id="resCards"></div>
   </section>
 
   <div class="two-up" id="links">
@@ -241,21 +244,22 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
 <script src="gate.js"></script>
 <script>
 (function () {
-  /* 内容配置（维护者看，不显示）：PRACTICE 利他禅修练习 {t,d,url}；PROJECTS 全班入口 {t,d,url}；STAFF 义工入口 {t,d,url,who,key}。
+  /* 内容配置（维护者看，不显示）：PROJECTS 全班入口 {t,d,url}；STAFF 义工入口 {t,d,url,who,key}；RESOURCES_DEFAULT 班级资料兜底（后端「资料」表读不到时才用）。
      轮播照片：Drive「DC1班活动图片归档/看板轮播」有图优先，否则自动取最新活动的精选或最新几张；都没有就显示封面。
      通知栏：公开表「通知」，班委在 微岗位报名.html#manage 顶部修改。公示数字：账本「公示」页发布（记账时勾选同步会自动发）。
      班级日历：公开表「日历」每行一条（id, kind birthday|event, title, date YYYY-MM-DD 年不明填 0000, lunar 1=农历, repeat yearly|weekly|none, time, note），班委直接在表里增改；页面只显示月/日。 */
   var PROJECTS = [
     { t: '班费公示', d: '每月收支、供养名单、结余，往月可回看。', url: '班费公示.html' },
-    { t: '班委和微岗位', d: '20 个微岗位的定岗名单与报名意愿。', url: '微岗位报名.html' },
-    { t: '活动照片', d: '班级活动相册，按活动分文件夹；可直接上传照片。', url: 'https://drive.google.com/drive/folders/1VyvDqOVdxgjbgbljwmcKTbEDVvTFg0DP' }
+    { t: '班委和微岗位', d: '20 个微岗位的定岗名单与报名意愿。', url: '微岗位报名.html' }
   ];
-  var PRACTICE = [
-    { t: '慈心每日练习', d: '初级慈经禅修，每天跟着练习。', url: 'https://mp-shares.github.io/courses/l21-metta-daily/?v=1793321132' }
+  var RESOURCES_DEFAULT = [
+    { title: '慈心每日练习', note: '初级慈经禅修，每天跟着练习。', url: 'https://mp-shares.github.io/courses/l21-metta-daily/?v=1793321132' },
+    { title: '活动相册', note: '班级活动照片，按活动分文件夹；可直接上传。', url: 'https://drive.google.com/drive/folders/1VyvDqOVdxgjbgbljwmcKTbEDVvTFg0DP' },
+    { title: '班费规则（讨论稿）', note: '待班委讨论定稿。', url: '班费公示.html#rules' }
   ];
   var STAFF = [
     { t: '班费账本', d: '录入收支与凭证，发布公示。', url: '班费账本.html', who: '记账义工', key: '记账口令' },
-    { t: '班委和微岗位管理', d: '改看板通知；设置定岗、录入报名意愿，复制统计。', url: '微岗位报名.html#manage', who: '班委', key: '班委口令' }
+    { t: '班委管理', d: '看板通知、班级日历、班级资料、微岗位定岗与报名。', url: '微岗位报名.html#manage', who: '班委', key: '班委口令' }
   ];
   var TOTAL_ROLES = 20;
 
@@ -275,13 +279,15 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     return '<a class="row" href="' + esc(p.url) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '><span class="t">' + esc(p.t) + '</span><span class="go">' + (ext ? '↗' : '›') + '</span><span class="d">' + esc(p.d) + tag + '</span></a>';
   };
   $('projectCards').innerHTML = PROJECTS.map(function (p) { return card(p, false); }).join('');
-  $('practiceCards').innerHTML = PRACTICE.map(function (p) { return card(p, false); }).join('');
+  function renderRes(items) { $('resCards').innerHTML = (items.length ? items : RESOURCES_DEFAULT).map(function (r) { return card({ t: r.title, d: r.note, url: r.url }, false); }).join(''); }
+  renderRes([]);
   $('staffCards').innerHTML = STAFF.map(function (p) { return card(p, true); }).join('');
 
   // 通知栏
+  function syncNews() { $('news').hidden = $('notice').hidden && $('calSoon').hidden; }
   function renderNotice(n) {
     var text = n && n.text ? String(n.text).trim() : '';
-    $('notice').hidden = !text;
+    $('notice').hidden = !text; syncNews();
     if (!text) return;
     $('noticeText').innerHTML = esc(text).replace(/\n/g, '<br>');
     var at = n.updatedAt ? new Date(n.updatedAt) : null;
@@ -375,7 +381,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     calItems.forEach(function (it) { occurrences(it, today0.getFullYear(), today0.getFullYear() + 1).forEach(function (o) { if (o.d >= today0 && o.d < end) occ.push(o); }); });
     occ.sort(byTime);
     occ = occ.filter(function (o) { if (o.it.repeat !== 'weekly') return true; if (seenWeekly[o.it.id]) return false; return seenWeekly[o.it.id] = true; }).slice(0, 8);
-    $('calSoon').hidden = !occ.length;
+    $('calSoon').hidden = !occ.length; syncNews();
     $('calSoon').innerHTML = occ.map(function (o) {
       var days = Math.round((o.d - today0) / 864e5), when = days === 0 ? '今天' : days === 1 ? '明天' : (o.d.getMonth() + 1) + '/' + o.d.getDate() + ' ' + WD[o.d.getDay()];
       var b = o.it.kind === 'birthday';
@@ -466,13 +472,14 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     QX.api('summary').then(function (r) { fee = r && r.ok ? r.summary : null; renderStats(); }).catch(function () {});
     QX.api('signups').then(function (r) { signups = r && r.ok ? r.people : null; assigned = (r && r.assigned) || {}; renderStats(); }).catch(function () {});
     QX.api('photos').then(function (r) { photos = r && r.ok ? (r.photos || []) : []; renderCarousel(); }).catch(function () {});
+    QX.api('resources').then(function (r) { if (r && r.ok && Array.isArray(r.items)) renderRes(r.items); }).catch(function () {});
   });
 
   // 导航高亮
   var links = document.querySelectorAll('nav.top a[data-nav]');
   if ('IntersectionObserver' in window) {
     var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) links.forEach(function (a) { a.classList.toggle('on', a.dataset.nav === e.target.id); }); }); }, { rootMargin: '-40% 0px -55% 0px' });
-    ['photos', 'practice', 'cal', 'show', 'links'].forEach(function (id) { io.observe($(id)); });
+    ['photos', 'cal', 'show', 'res', 'links'].forEach(function (id) { io.observe($(id)); });
   }
 })();
 </script>

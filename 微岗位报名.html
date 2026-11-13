@@ -108,7 +108,11 @@ dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 32
 .dhead h3 { margin: 0; font-family: var(--display); font-size: 18px; }
 .dbody { padding: 16px 20px; overflow-y: auto; display: grid; gap: 16px; }
 .field label.lab, .group > .lab { display: block; font-size: 12px; color: var(--fg-2); letter-spacing: .06em; margin-bottom: 6px; }
-input[type="text"], textarea { font: inherit; width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--fg); }
+input[type="text"], input[type="date"], input[type="number"], select, textarea { font: inherit; width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--fg); }
+.pill { font: inherit; font-size: 12px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--fg-2); cursor: pointer; }
+.pill.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+.cat .tablewrap { border: 0; border-radius: 0; }
+.cat h2 .sum .btn { font-size: 13px; padding: 4px 10px; margin-left: 8px; }
 textarea { min-height: 64px; resize: vertical; }
 .opts { display: flex; flex-wrap: wrap; gap: 6px; }
 label.opt { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 7px; cursor: pointer; background: var(--bg); }
@@ -159,6 +163,8 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
   <section class="view" id="noticeEd" hidden><div class="cat"><h2><span>看板通知</span><span class="sum">显示在班级看板顶部，留空则不显示</span></h2>
     <div style="padding:12px 16px;display:grid;gap:8px"><textarea id="noticeText" placeholder="例：本周四晚 8 点线上共修，请提前 5 分钟进会议室。"></textarea>
     <div class="actions" style="align-items:center"><button type="button" class="btn primary" id="noticeSave">保存通知</button><span class="sum" id="noticeAt" style="font-size:13px;color:var(--fg-2)"></span></div></div></div></section>
+  <section class="view" id="calEd" hidden><div class="cat"><h2><span>班级日历</span><span class="sum"><button type="button" class="pill on" data-f="event">班级事项</button> <button type="button" class="pill" data-f="birthday">生日</button><button type="button" class="btn" id="calAdd">＋ 添加</button></span></h2><div id="calTable"></div></div></section>
+  <section class="view" id="resEd" hidden><div class="cat"><h2><span>班级资料</span><span class="sum">显示在看板「班级资料」<button type="button" class="btn" id="resAdd">＋ 添加</button></span></h2><div id="resTable"></div></div></section>
   <section class="view" id="view-roles"></section>
   <section class="view" id="view-people" hidden></section>
 
@@ -180,6 +186,35 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
       <div><button type="button" class="btn danger" id="delBtn" hidden>删除此人</button></div>
       <div class="right"><button type="button" class="btn" id="cancelBtn">取消</button><button type="submit" class="btn primary" id="saveBtn">保存</button></div>
     </div>
+  </form>
+</dialog>
+<dialog id="cdlg">
+  <form id="cform" method="dialog">
+    <div class="dhead"><h3 id="cTitle">添加日程</h3><button type="button" class="btn" id="cclose">关闭</button></div>
+    <div class="dbody">
+      <div class="group"><div class="lab">类型</div><div class="opts"><label class="opt"><input type="radio" name="ckind" value="event" checked>班级事项</label><label class="opt"><input type="radio" name="ckind" value="birthday">生日</label></div></div>
+      <div class="field"><label class="lab" for="cName">标题 / 称呼</label><input type="text" id="cName" autocomplete="off" required></div>
+      <div class="field"><label class="lab" for="cDate">日期</label><input type="date" id="cDate" required></div>
+      <div class="opts"><label class="opt"><input type="checkbox" id="cNoYear">年份不详（只记月日）</label><label class="opt"><input type="checkbox" id="cLunar">这是农历日期</label></div>
+      <div class="field"><label class="lab" for="cRepeat">重复</label><select id="cRepeat"><option value="none">一次</option><option value="yearly">每年</option><option value="weekly">每周（按所选日期的星期几，从该日起）</option></select></div>
+      <div class="field"><label class="lab" for="cTime">时间（可选）</label><input type="text" id="cTime" autocomplete="off" placeholder="如 19:30"></div>
+      <div class="field"><label class="lab" for="cNote">备注（可选，会显示）</label><input type="text" id="cNote" autocomplete="off"></div>
+      <div class="err" id="cErr" hidden></div>
+    </div>
+    <div class="dfoot"><div><button type="button" class="btn danger" id="cDel" hidden>删除</button></div><div class="right"><button type="button" class="btn" id="ccancel">取消</button><button type="submit" class="btn primary" id="csave">保存</button></div></div>
+  </form>
+</dialog>
+<dialog id="rdlg">
+  <form id="rform" method="dialog">
+    <div class="dhead"><h3 id="rTitle">添加资料</h3><button type="button" class="btn" id="rclose">关闭</button></div>
+    <div class="dbody">
+      <div class="field"><label class="lab" for="rName">标题</label><input type="text" id="rName" autocomplete="off" required></div>
+      <div class="field"><label class="lab" for="rUrl">链接</label><input type="text" id="rUrl" autocomplete="off" placeholder="https://… 或本站页面如 班费公示.html#rules" required></div>
+      <div class="field"><label class="lab" for="rNote">一句话说明（可选）</label><input type="text" id="rNote" autocomplete="off"></div>
+      <div class="field"><label class="lab" for="rSort">排序（数字小的在前）</label><input type="number" id="rSort" value="50"></div>
+      <div class="err" id="rErr" hidden></div>
+    </div>
+    <div class="dfoot"><div><button type="button" class="btn danger" id="rDel" hidden>删除</button></div><div class="right"><button type="button" class="btn" id="rcancel">取消</button><button type="submit" class="btn primary" id="rsave">保存</button></div></div>
   </form>
 </dialog>
 <dialog id="adlg">
@@ -307,6 +342,97 @@ document.querySelectorAll('.tabs button').forEach(btn => btn.addEventListener('c
 }));
 try { const v = localStorage.getItem('wgw-view'); if (v && v !== 'time') document.querySelector(`.tabs button[data-view="${v}"]`)?.click(); } catch (_) {}
 
+// 班级日历 / 班级资料（班委管理）：读写公开表「日历」「资料」
+let calItems = [], calF = 'event', calEditing = null, resItems = [], resEditing = null;
+const WDN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+const REP = { none: '一次', yearly: '每年', weekly: '每周' };
+async function loadCal() { try { const r = await apiPost({ action: 'calendar', key: mkey }); calItems = r && r.ok ? (r.items || []) : []; } catch (_) { calItems = []; } renderCalEd(); }
+async function loadRes() { try { const r = await apiPost({ action: 'resources', key: mkey }); resItems = r && r.ok ? (r.items || []) : []; } catch (_) { resItems = []; } renderResEd(); }
+function calDateLabel(i) {
+  const [y, m, d] = String(i.date).split('-');
+  if (i.repeat === 'weekly') { const dt = new Date(+y || 2000, +m - 1, +d); return '每' + WDN[dt.getDay()] + '（自 ' + +m + '/' + +d + '）'; }
+  return (i.lunar ? '农历 ' : '') + (+y ? y + '-' + m + '-' + d : +m + '/' + +d) + (i.lunar ? '' : '');
+}
+function renderCalEd() {
+  const rows = calItems.filter(i => (i.kind === 'birthday') === (calF === 'birthday'))
+    .sort((a, b) => (calF === 'birthday' ? a.date.slice(5).localeCompare(b.date.slice(5)) : a.date.localeCompare(b.date)));
+  document.querySelectorAll('#calEd .pill').forEach(b => b.classList.toggle('on', b.dataset.f === calF));
+  $('calTable').innerHTML = rows.length
+    ? `<div class="tablewrap"><table><thead><tr><th>日期</th><th>${calF === 'birthday' ? '称呼' : '标题'}</th><th>重复</th><th>时间</th><th>备注</th><th></th></tr></thead><tbody>` +
+      rows.map(i => `<tr><td>${esc(calDateLabel(i))}</td><td><b>${esc(i.title)}</b></td><td>${REP[i.repeat] || ''}</td><td>${esc(i.time)}</td><td class="note">${esc(i.note)}</td><td><button class="link" data-cedit="${esc(i.id)}">编辑</button></td></tr>`).join('') + '</tbody></table></div>'
+    : `<div class="empty" style="padding:18px">还没有${calF === 'birthday' ? '生日' : '班级事项'}，点「添加」录入。</div>`;
+}
+document.querySelectorAll('#calEd .pill').forEach(b => b.addEventListener('click', () => { calF = b.dataset.f; renderCalEd(); }));
+function openCal(id) {
+  const i = id ? calItems.find(x => x.id === id) : null; calEditing = i ? i.id : null;
+  $('cTitle').textContent = i ? '修改日程 · ' + i.title : '添加日程';
+  document.querySelector(`input[name=ckind][value=${i ? i.kind : calF}]`).checked = true;
+  $('cName').value = i ? i.title : '';
+  const [y, m, d] = i ? i.date.split('-') : ['', '', ''];
+  $('cDate').value = i ? ((+y ? y : '2000') + '-' + m + '-' + d) : ''; $('cNoYear').checked = !!(i && !+y); $('cLunar').checked = !!(i && i.lunar);
+  $('cRepeat').value = i ? (i.repeat || 'none') : (calF === 'birthday' ? 'yearly' : 'none');
+  $('cTime').value = i ? i.time : ''; $('cNote').value = i ? i.note : '';
+  $('cDel').hidden = !i; $('cDel').textContent = '删除'; $('cDel').dataset.armed = ''; $('cErr').hidden = true;
+  $('cdlg').showModal();
+}
+document.querySelectorAll('input[name=ckind]').forEach(r => r.addEventListener('change', () => { if (!calEditing) $('cRepeat').value = r.value === 'birthday' ? 'yearly' : 'none'; }));
+$('calAdd').addEventListener('click', () => openCal(null));
+$('cclose').addEventListener('click', () => $('cdlg').close()); $('ccancel').addEventListener('click', () => $('cdlg').close());
+$('cform').addEventListener('submit', async ev => {
+  ev.preventDefault(); if (!API) return;
+  const kind = document.querySelector('input[name=ckind]:checked').value, dv = $('cDate').value;
+  if (!dv) { $('cErr').textContent = '请选日期。'; $('cErr').hidden = false; return; }
+  const item = { id: calEditing || undefined, kind, title: $('cName').value.trim(), date: ($('cNoYear').checked ? '0000' : dv.slice(0, 4)) + dv.slice(4), lunar: $('cLunar').checked,
+    repeat: $('cRepeat').value, time: $('cTime').value.trim(), note: $('cNote').value.trim() };
+  $('csave').disabled = true;
+  try { const r = await apiPost({ action: 'calendar_set', key: mkey, item }); if (!r.ok) throw new Error(r.error || '保存失败');
+    const k = calItems.findIndex(x => x.id === r.item.id); if (k >= 0) calItems[k] = r.item; else calItems.push(r.item);
+    $('cdlg').close(); toast('已保存，看板刷新即见'); renderCalEd(); }
+  catch (err) { $('cErr').textContent = err?.message || '保存失败'; $('cErr').hidden = false; }
+  finally { $('csave').disabled = false; }
+});
+$('cDel').addEventListener('click', async () => {
+  const b = $('cDel'); if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = '再点一次确认删除'; return; }
+  b.disabled = true;
+  try { const r = await apiPost({ action: 'calendar_delete', key: mkey, id: calEditing }); if (!r.ok) throw new Error(r.error); calItems = calItems.filter(x => x.id !== calEditing); $('cdlg').close(); toast('已删除'); renderCalEd(); }
+  catch (err) { $('cErr').textContent = '删除失败：' + (err?.message || ''); $('cErr').hidden = false; }
+  finally { b.disabled = false; }
+});
+function renderResEd() {
+  $('resTable').innerHTML = resItems.length
+    ? `<div class="tablewrap"><table><thead><tr><th>排序</th><th>标题</th><th>链接</th><th>说明</th><th></th></tr></thead><tbody>` +
+      resItems.map(i => `<tr><td>${i.sort}</td><td><b>${esc(i.title)}</b></td><td class="note"><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.url.length > 48 ? i.url.slice(0, 46) + '…' : i.url)}</a></td><td class="note">${esc(i.note)}</td><td><button class="link" data-redit="${esc(i.id)}">编辑</button></td></tr>`).join('') + '</tbody></table></div>'
+    : '<div class="empty" style="padding:18px">还没有资料链接，点「添加」录入（看板会先显示页内默认的几条）。</div>';
+}
+function openRes(id) {
+  const i = id ? resItems.find(x => x.id === id) : null; resEditing = i ? i.id : null;
+  $('rTitle').textContent = i ? '修改资料 · ' + i.title : '添加资料';
+  $('rName').value = i ? i.title : ''; $('rUrl').value = i ? i.url : ''; $('rNote').value = i ? i.note : ''; $('rSort').value = i ? i.sort : 50;
+  $('rDel').hidden = !i; $('rDel').textContent = '删除'; $('rDel').dataset.armed = ''; $('rErr').hidden = true;
+  $('rdlg').showModal();
+}
+$('resAdd').addEventListener('click', () => openRes(null));
+$('rclose').addEventListener('click', () => $('rdlg').close()); $('rcancel').addEventListener('click', () => $('rdlg').close());
+$('rform').addEventListener('submit', async ev => {
+  ev.preventDefault(); if (!API) return;
+  const item = { id: resEditing || undefined, title: $('rName').value.trim(), url: $('rUrl').value.trim(), note: $('rNote').value.trim(), sort: +$('rSort').value || 0 };
+  $('rsave').disabled = true;
+  try { const r = await apiPost({ action: 'resource_set', key: mkey, item }); if (!r.ok) throw new Error(r.error || '保存失败');
+    const k = resItems.findIndex(x => x.id === r.item.id); if (k >= 0) resItems[k] = r.item; else resItems.push(r.item);
+    resItems.sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title));
+    $('rdlg').close(); toast('已保存，看板刷新即见'); renderResEd(); }
+  catch (err) { $('rErr').textContent = err?.message || '保存失败'; $('rErr').hidden = false; }
+  finally { $('rsave').disabled = false; }
+});
+$('rDel').addEventListener('click', async () => {
+  const b = $('rDel'); if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = '再点一次确认删除'; return; }
+  b.disabled = true;
+  try { const r = await apiPost({ action: 'resource_delete', key: mkey, id: resEditing }); if (!r.ok) throw new Error(r.error); resItems = resItems.filter(x => x.id !== resEditing); $('rdlg').close(); toast('已删除'); renderResEd(); }
+  catch (err) { $('rErr').textContent = '删除失败：' + (err?.message || ''); $('rErr').hidden = false; }
+  finally { b.disabled = false; }
+});
+document.addEventListener('click', e => { const c = e.target.closest('[data-cedit]'); if (c) openCal(c.dataset.cedit); const r = e.target.closest('[data-redit]'); if (r) openRes(r.dataset.redit); });
+
 // 定岗编辑（班委）：从报名同学中勾选，或手填其他同学
 function openAssign(role) {
   assigningRole = role; const cur = assignedOf(role), names = sortedPeople().map(p => p.name);
@@ -361,7 +487,7 @@ $('noticeSave').addEventListener('click', async () => {
 function setMode(on) {
   manage = on;
   $('manageBtn').hidden = on; $('exitBtn').hidden = !on; $('copyBtn').hidden = !on; $('addBtn').hidden = !on;
-  $('noticeEd').hidden = !on; if (on) loadNotice();
+  $('noticeEd').hidden = !on; $('calEd').hidden = !on; $('resEd').hidden = !on; if (on) { loadNotice(); loadCal(); loadRes(); }
   $('tab-people').hidden = !on;
   if (!on && view === 'people') document.getElementById('tab-roles').click();
   render();
