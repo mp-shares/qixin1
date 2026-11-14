@@ -6,7 +6,7 @@
 <title>栖心一班 班委和微岗位</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
 <style>
-/* Layout: one column, header(标题随模式：班委和微岗位 / 班委管理) → tiles(仅岗位/报名 tab) → tabs(公开只有「岗位」；班委模式 通知/日历/资料/名单/岗位/报名，#manage-<view> 直达) → 每 tab 一个 section → dialog editors. (按岗位：每岗两栏「定岗」(公开表「定岗」·班委可改) + 「报名意愿」(公开表「微岗位」) / 按人员) → dialog editor. 「组修时间」已于 2026-11-13 下线（分组固定后不再需要）；表里 times 列保留不显示。 Cool paper + 竹青 accent. */
+/* Layout: one column, header(标题随模式：班委和微岗位 / 班委管理) → tiles(仅岗位 tab) → tabs(公开只有「岗位」；班委模式 通知/日历/资料/名单/岗位，#manage-<view> 直达) → 每 tab 一个 section → dialog editors. (按岗位：每岗两栏「定岗」(公开表「定岗」·班委可改) + 「报名意愿」(公开表「微岗位」) / 按人员) → dialog editor. 「组修时间」已于 2026-11-13 下线（分组固定后不再需要）；表里 times 列保留不显示。 Cool paper + 竹青 accent. */
 :root {
   --bg: #f3f4f1;
   --paper: #ffffff;
@@ -179,7 +179,6 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
       <button role="tab" class="mg" aria-selected="false" data-view="res" hidden>资料</button>
       <button role="tab" class="mg" aria-selected="false" data-view="roster" hidden>名单</button>
       <button role="tab" id="tab-roles" aria-selected="true" data-view="roles">岗位</button>
-      <button role="tab" id="tab-people" class="mg" aria-selected="false" data-view="people" hidden>报名</button>
     </div>
     <div class="actions">
       <button class="btn" id="manageBtn">班委管理</button>
@@ -194,7 +193,6 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
   <section class="view" id="calEd" hidden><div class="cat"><h2><span>班级日历</span><span class="sum"><button type="button" class="pill on" data-f="event">班级事项</button> <button type="button" class="pill" data-f="birthday">生日</button><button type="button" class="btn" id="calAdd">＋ 添加</button></span></h2><div id="calTable"></div></div></section>
   <section class="view" id="resEd" hidden><div class="cat"><h2><span>班级资料</span><span class="sum">显示在看板「班级资料」<button type="button" class="btn" id="resAdd">＋ 添加</button></span></h2><div id="resTable"></div></div></section>
   <section class="view" id="view-roles"></section>
-  <section class="view" id="view-people" hidden></section>
 
   <footer id="foot">班委：班长、各组组长、传灯 / 慈善 / 文传班委（依《静心学堂班级手册 2.0》）。微岗位：修学支持 5 岗 · 关怀服务 5 岗 · 传灯活动 5 岗 · 班级共建 5 岗，共 20 个。每人至少认领 1 项，可轮换，可多人协作。</footer>
 </div>
@@ -400,17 +398,6 @@ function render() {
   }).join('');
   document.querySelectorAll('#view-roles .cat').forEach(el => el.classList.toggle('showdesc', showDesc.has(el.dataset.cat)));
 
-  // 按人员（仅班委管理模式，含备注）
-  if (!manage) { $('view-people').innerHTML = ''; } else if (!ps.length) {
-    $('view-people').innerHTML = `<div class="empty"><b>还没有报名记录</b>点右上角「添加报名」录入第一位同学，或等待数据加载。</div>`;
-  } else {
-    $('view-people').innerHTML = `<div class="tablewrap"><table><thead><tr><th>姓名</th><th>认领岗位</th><th>其他 / 备注</th><th></th></tr></thead><tbody>` +
-      ps.map(p => `<tr><td><b>${esc(p.name)}</b></td>` +
-        `<td><div class="cell-chips">${(p.roles || []).map(r => ROLE[r] ? `<span class="tag">${ROLE[r].name}</span>` : '').join('')}${p.other ? `<span class="tag t">其他：${esc(p.other)}</span>` : ''}${!(p.roles || []).length && !p.other ? '<span class="vacant">尚未认领</span>' : ''}</div></td>` +
-        `<td class="note">${esc(p.note)}</td>` +
-        `<td><button class="link" data-edit="${esc(p.id)}">编辑</button></td></tr>`).join('') +
-      `</tbody></table></div>`;
-  }
 
 }
 function chip(p, label) { return manage ? `<button class="chip" data-edit="${esc(p.id)}">${label || esc(p.name)}</button>` : `<span class="chip">${label || esc(p.name)}</span>`; }
@@ -422,13 +409,13 @@ document.addEventListener('click', e => {
 
 // Tabs
 // tab → section；公开模式只有「岗位」。统计 tiles 和页脚只在 岗位/报名 两个 tab 显示
-const VIEWS = { notice: 'noticeEd', cal: 'calEd', res: 'resEd', roster: 'rosterEd', roles: 'view-roles', people: 'view-people' };
+const VIEWS = { notice: 'noticeEd', cal: 'calEd', res: 'resEd', roster: 'rosterEd', roles: 'view-roles' };
 function showView(v) {
   if (!VIEWS[v] || (!manage && v !== 'roles')) v = 'roles';
   view = v;
   document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.view === v));
   Object.entries(VIEWS).forEach(([k, id]) => $(id).hidden = k !== v);
-  const rolesish = v === 'roles' || v === 'people'; $('tiles').hidden = !rolesish; $('foot').hidden = !rolesish; $('copyBtn').hidden = !(manage && rolesish); $('addBtn').hidden = !(manage && rolesish);
+  const rolesish = v === 'roles'; $('tiles').hidden = !rolesish; $('foot').hidden = !rolesish; $('copyBtn').hidden = !(manage && rolesish); $('addBtn').hidden = !(manage && rolesish);
   if (manage) try { localStorage.setItem('wgw-view', v); } catch (_) {}
 }
 const storedView = () => { try { return localStorage.getItem('wgw-view') || 'roles'; } catch (_) { return 'roles'; } };
