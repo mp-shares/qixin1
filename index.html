@@ -7,7 +7,7 @@
 <title>栖心一班班级看板</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* Layout: sticky nav → masthead → ① 通知·近期（公开表「通知」多条置顶：重要在前、到期自动消失、可关联日历事项(ref cal:id，显示日期并从近期 chips 里去重)或资料(res:id) + 日历近 30 天 chips；都空则整块不显示）② 活动照片（snap carousel；没照片时一张封面）③ 班级日历（月视图 + 当月清单；公开表「日历」）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 班级资料（公开表「资料」链接列表；后端不可用时用页内 RESOURCES_DEFAULT）⑥ 全班入口 / 义工入口. 通知/日历/资料/定岗 都由班委在 微岗位报名.html#manage 维护（各 band 标题右侧的「编辑 ›」直达对应管理区块：#manage-notice / -cal / -res）. Content lives in PROJECTS / STAFF / RESOURCES_DEFAULT at the top of the script. */
+/* Layout: sticky nav → masthead → ① 通知·近期（公开表「通知」多条置顶：重要在前、到期自动消失、可关联日历事项(ref cal:id，显示日期并从近期 chips 里去重)或资料(res:id) + 日历近 30 天 chips；都空则整块不显示）② 活动照片（snap carousel；没照片时一张封面）③ 班级日历（月视图 + 当月清单；公开表「日历」）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 班级资料（公开表「资料」链接列表；后端不可用时用页内 RESOURCES_DEFAULT）⑥ 全班入口 / 义工入口. 通知/日历/资料/定岗 都由班委在 班委.html#manage 维护（各 band 标题右侧的「编辑 ›」直达对应管理区块：#manage-notice / -cal / -res）. Content lives in PROJECTS / STAFF / RESOURCES_DEFAULT at the top of the script. */
 :root{
   --bg:#f4f5f8; --card:#ffffff; --ink:#1b2130; --muted:#6b7386; --line:#e0e4ec; --soft:#eef0f5;
   --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
@@ -201,7 +201,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   </header>
 
   <section class="band" id="news" hidden>
-    <h2>通知 · 近期 <a class="edit" href="微岗位报名.html#manage-notice">编辑 ›</a></h2>
+    <h2>通知 · 近期 <a class="edit" href="班委.html#manage-notice">编辑 ›</a></h2>
     <div class="notices" id="notices" hidden></div>
     <div class="soon" id="calSoon" hidden></div>
   </section>
@@ -215,7 +215,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   </section>
 
   <section class="band" id="cal">
-    <h2>班级日历 <small>生日 · 班级事项</small><a class="edit" href="微岗位报名.html#manage-cal">编辑 ›</a></h2>
+    <h2>班级日历 <small>生日 · 班级事项</small><a class="edit" href="班委.html#manage-cal">编辑 ›</a></h2>
     <div class="cal">
       <div class="cal-head"><b id="calTitle"></b><button type="button" id="calPrev" aria-label="上个月">‹</button><button type="button" id="calToday">今天</button><button type="button" id="calNext" aria-label="下个月">›</button></div>
       <div class="cal-grid" id="calGrid"></div>
@@ -224,12 +224,12 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   </section>
 
   <section class="band" id="show">
-    <h2>班级公示 <a class="edit" href="班费账本.html">记账 ›</a><a class="edit" href="微岗位报名.html#manage">定岗 ›</a></h2>
+    <h2>班级公示 <a class="edit" href="班费账本.html">记账 ›</a><a class="edit" href="班委.html#manage">定岗 ›</a></h2>
     <div class="stats" id="stats"></div>
   </section>
 
   <section class="band" id="res">
-    <h2>班级资料 <a class="edit" href="微岗位报名.html#manage-res">编辑 ›</a></h2>
+    <h2>班级资料 <a class="edit" href="班委.html#manage-res">编辑 ›</a></h2>
     <div class="list" id="resCards"></div>
   </section>
 
@@ -252,11 +252,11 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
 (function () {
   /* 内容配置（维护者看，不显示）：PROJECTS 全班入口 {t,d,url}；STAFF 义工入口 {t,d,url,who,key}；RESOURCES_DEFAULT 班级资料兜底（后端「资料」表读不到时才用）。
      轮播照片：Drive「DC1班活动图片归档/看板轮播」有图优先，否则自动取最新活动的精选或最新几张；都没有就显示封面。
-     通知栏：公开表「通知」，班委在 微岗位报名.html#manage 顶部修改。公示数字：账本「公示」页发布（记账时勾选同步会自动发）。
+     通知栏：公开表「通知」，班委在 班委.html#manage 顶部修改。公示数字：账本「公示」页发布（记账时勾选同步会自动发）。
      班级日历：公开表「日历」每行一条（id, kind birthday|event, title, date YYYY-MM-DD 年不明填 0000, lunar 1=农历, repeat yearly|weekly|none, time, note），班委直接在表里增改；页面只显示月/日。 */
   var PROJECTS = [
     { t: '班费公示', d: '每月收支、供养名单、结余，往月可回看。', url: '班费公示.html' },
-    { t: '班委和微岗位', d: '20 个微岗位的定岗名单与报名意愿。', url: '微岗位报名.html' }
+    { t: '班委和微岗位', d: '20 个微岗位的定岗名单与报名意愿。', url: '班委.html' }
   ];
   var RESOURCES_DEFAULT = [
     { title: '慈心每日练习', note: '初级慈经禅修，每天跟着练习。', url: 'https://mp-shares.github.io/courses/l21-metta-daily/?v=1793321132' },
@@ -265,7 +265,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   ];
   var STAFF = [
     { t: '班费账本', d: '录入收支与凭证，发布公示。', url: '班费账本.html', who: '记账义工', key: '记账口令' },
-    { t: '班委管理', d: '看板通知、班级日历、班级资料、微岗位定岗与报名。', url: '微岗位报名.html#manage', who: '班委', key: '班委口令' }
+    { t: '班委管理', d: '看板通知、班级日历、班级资料、班级名单、岗位定岗与报名。', url: '班委.html#manage', who: '班委', key: '班委口令' }
   ];
   var TOTAL_ROLES = 20, BW_TOTAL = 6;   // 微岗位 20 · 班委 6（班长、两组组长、传灯/慈善/文传班委，定岗代码 bw1…bw6）
 
@@ -304,7 +304,8 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
         var it = calItems.filter(function (c) { return c.id === ref.slice(4); })[0];
         if (it) { pinnedCal[it.id] = 1; var d = nextOcc(it); if (d) dateLbl = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + WD[d.getDay()] + (it.time ? ' ' + it.time : ''); }
       }
-      var small = [n.note ? esc(n.note) : ''].filter(Boolean).join('') + (n.link ? '<a href="' + esc(safeUrl(n.link)) + '"' + (/^https?:/.test(n.link) ? ' target="_blank" rel="noopener"' : '') + '>查看 ›</a>' : '');
+      var links = String(n.link || '').split('\n').map(function (l) { l = l.trim(); var i = l.lastIndexOf(' | '); return !l ? null : i > 0 ? { t: l.slice(0, i).trim(), u: l.slice(i + 3).trim() } : { t: '', u: l }; }).filter(Boolean);   // link 列每行一条「名称 | 链接」
+      var small = [n.note ? esc(n.note) : ''].filter(Boolean).join('') + links.map(function (l) { return '<a href="' + esc(safeUrl(l.u)) + '"' + (/^https?:/.test(l.u) ? ' target="_blank" rel="noopener"' : '') + '>' + esc(l.t || '查看') + ' ›</a>'; }).join('');
       return '<div class="notice' + (n.important ? ' imp' : '') + '"><span class="nk">' + (n.important ? '重要' : '通知') + '</span><p>' + (dateLbl ? '<b>' + esc(dateLbl) + '</b> · ' : '') + esc(n.text).replace(/\n/g, '<br>') + '</p>' + (small ? '<small>' + small + '</small>' : '') + '</div>';
     });
     $('notices').innerHTML = html.join(''); $('notices').hidden = !html.length; syncNews();
@@ -444,7 +445,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
       var bwN = Object.keys(assigned).filter(function (r) { return r.indexOf('bw') === 0 && has(r); }).length;
       out.push('<div class="stat"><div class="k"><i></i>班委和微岗位</div><div class="big">' + asgN + ' <small>/ ' + TOTAL_ROLES + ' 岗已定</small></div>' +
         '<div class="gap">班委 <b>' + bwN + '</b> / ' + BW_TOTAL + ' 岗已定。<b>' + n + '</b> 人提交了微岗位报名意愿，覆盖 <b>' + covered + '</b> 个岗位。' + (open ? '<br>还有 <b>' + open + '</b> 个微岗位待定。' : '<br>所有微岗位都已定岗 🙏') + '</div>' +
-        '<div class="links"><a href="微岗位报名.html">看定岗与意愿 ›</a></div></div>');
+        '<div class="links"><a href="班委.html">看定岗与意愿 ›</a></div></div>');
     }
     $('stats').innerHTML = out.join('');
   }

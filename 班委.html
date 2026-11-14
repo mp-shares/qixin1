@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>栖心一班 班委和微岗位</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: one column, header(标题随模式：班委和微岗位 / 班委管理) → tiles(仅岗位/报名 tab) → tabs(公开只有「岗位」；班委模式 通知/日历/资料/名单/岗位/报名，#manage-<view> 直达) → 每 tab 一个 section → dialog editors. (按岗位：每岗两栏「定岗」(公开表「定岗」·班委可改) + 「报名意愿」(公开表「微岗位」) / 按人员) → dialog editor. 「组修时间」已于 2026-11-13 下线（分组固定后不再需要）；表里 times 列保留不显示。 Cool paper + 竹青 accent. */
+:root {
+  --bg: #f3f4f1;
+  --paper: #ffffff;
+  --paper-2: #e9ece6;
+  --fg: #1f2a26;
+  --fg-2: #5a6660;
+  --line: #d3d9d3;
+  --accent: #2f6b5a;
+  --accent-soft: #dcebe4;
+  --accent-ink: #1d4c3f;
+  --warn: #b4552a;
+  --warn-soft: #f6e4da;
+  --focus: #2f6b5a;
+  --display: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --body: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171c1a; --paper: #202724; --paper-2: #2a332f; --fg: #e6ebe8; --fg-2: #9fada6;
+    --line: #37423d; --accent: #7fc0a8; --accent-soft: #24433a; --accent-ink: #bfe3d3;
+    --warn: #e59a73; --warn-soft: #4a3026; --focus: #7fc0a8; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #171c1a; --paper: #202724; --paper-2: #2a332f; --fg: #e6ebe8; --fg-2: #9fada6;
+  --line: #37423d; --accent: #7fc0a8; --accent-soft: #24433a; --accent-ink: #bfe3d3;
+  --warn: #e59a73; --warn-soft: #4a3026; --focus: #7fc0a8; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 28px 56px; padding-inline: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 20px; }
+.eyebrow { font-size: 12px; letter-spacing: .18em; color: var(--accent); font-weight: 500; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4vw, 34px); margin: 4px 0 6px; letter-spacing: .04em; text-wrap: balance; }
+.src { color: var(--fg-2); font-size: 13px; max-width: 60ch; }
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fg-2); padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-2); }
+.status.on .dot { background: var(--accent); }
+.status.ro .dot { background: var(--warn); }
+
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+.tile { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.tile .k { font-size: 12px; color: var(--fg-2); letter-spacing: .06em; }
+.tile .v { font-family: var(--display); font-size: 30px; font-weight: 600; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.tile .v small { font-family: var(--body); font-size: 13px; color: var(--fg-2); font-weight: 400; margin-left: 4px; }
+.tile.warn .v { color: var(--warn); }
+@media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.tabs { display: inline-flex; background: var(--paper-2); border-radius: 8px; padding: 3px; gap: 2px; }
+.tabs button { border: 0; background: transparent; color: var(--fg-2); font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 6px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--paper); color: var(--fg); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 7px; border: 1px solid var(--line); background: var(--paper); color: var(--fg); cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+.btn.danger { color: var(--warn); border-color: var(--warn); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:focus-visible, .tabs button:focus-visible, .chip:focus-visible, input:focus-visible, textarea:focus-visible, label.opt:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+section.view[hidden], #view-roles[hidden], .tiles[hidden] { display: none !important; }
+.cat { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; overflow: hidden; min-width: 0; align-self: start; }
+/* 微岗位四类 2×2 排布（宽屏）；班委一类通栏在上 */
+@media (min-width: 760px) { #view-roles { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } #view-roles .cat { margin-bottom: 0; } #view-roles .cat.bw { grid-column: 1 / -1; } #view-roles .cat:not(.bw) .role { grid-template-columns: 112px minmax(0,1fr) minmax(0,1fr); gap: 4px 10px; padding: 7px 12px; } #view-roles .cat:not(.bw) .role .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; } #view-roles .cat:not(.bw) .role .count { display: none; } #view-roles .cat:not(.bw) h2 { padding: 10px 12px; font-size: 16px; } #view-roles .cat:not(.bw) .role.head { padding: 4px 12px; } }
+.cat h2 { font-family: var(--display); font-size: 17px; font-weight: 600; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.cat h2 .sum { font-family: var(--body); font-size: 13px; color: var(--fg-2); font-weight: 400; font-variant-numeric: tabular-nums; }
+.role { display: grid; grid-template-columns: 132px minmax(0,1fr) minmax(0,1fr); gap: 4px 14px; padding: 7px 16px; border-top: 1px solid var(--line); align-items: center; }
+/* 班委：岗位横向展开，一格一岗（岗位名在上、承担人在下）；窄屏自动折行 */
+.bwgrid { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 1px; background: var(--line); }
+.bwcell { background: var(--paper); padding: 9px 12px 10px; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.bwcell .name { font-weight: 500; font-size: 13.5px; }
+.bwcell .people { align-items: center; }
+.bwcell .desc { display: none; color: var(--fg-2); font-size: 12px; line-height: 1.5; }
+.cat.showdesc .bwcell .desc { display: block; }
+@media (max-width: 760px) { .bwgrid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (max-width: 460px) { .bwgrid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+.role.head { padding: 5px 16px; font-size: 11px; color: var(--fg-2); letter-spacing: .06em; background: var(--paper-2); border-top: 0; }
+.role .desc { display: none; }
+.cat.showdesc .role .desc { display: block; grid-column: 1 / -1; margin-top: -2px; }
+.cat h2 .sum button.pill { margin-left: 8px; }
+.eyebrow .backlink { color: var(--accent); text-decoration: none; } .eyebrow .backlink:hover { text-decoration: underline; }
+.cols { display: contents; }
+.col { min-width: 0; }
+.col .cl { display: none; }
+.cat.bw h2 { background: var(--accent-soft); }
+.col .cl { font-size: 11px; color: var(--fg-2); letter-spacing: .06em; margin-bottom: 4px; }
+.chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); cursor: default; }
+.people .link { font: inherit; font-size: 12px; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0 2px; text-decoration: underline; align-self: center; }
+.role:first-of-type { border-top: 0; }
+.role .name { font-weight: 500; display: flex; align-items: baseline; gap: 8px; }
+.role .desc { color: var(--fg-2); font-size: 12.5px; }
+.count { font-size: 11px; min-width: 22px; text-align: center; padding: 0 6px; border-radius: 999px; white-space: nowrap; background: var(--accent-soft); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.count.zero { background: var(--warn-soft); color: var(--warn); }
+.people { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; align-items: center; }
+.chip { font: inherit; font-size: 12.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper-2); color: var(--fg); cursor: pointer; }
+.chip:hover { border-color: var(--accent); }
+.vacant { font-size: 13px; color: var(--warn); }
+@media (max-width: 560px) { .role { grid-template-columns: 1fr; gap: 3px; align-items: start; } .role.head { display: none; } .col { display: flex; gap: 8px; align-items: baseline; } .col .cl { display: inline; flex: none; font-size: 11px; color: var(--fg-2); min-width: 3.5em; } }
+
+.linkpick { border: 1px solid var(--line); border-radius: 7px; padding: 4px 10px 8px; max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 3px; background: var(--paper); }
+.linkpick .g { font-size: 11px; color: var(--fg-2); letter-spacing: .06em; margin: 6px 0 1px; }
+.linkpick label { display: flex; gap: 8px; align-items: center; font-size: 13.5px; cursor: pointer; }
+.tablewrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--fg-2); letter-spacing: .06em; font-weight: 500; background: var(--paper-2); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td .cell-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+td .tag { font-size: 12px; padding: 1px 8px; border-radius: 4px; background: var(--accent-soft); color: var(--accent-ink); white-space: nowrap; }
+td .tag.t { background: var(--paper-2); color: var(--fg-2); }
+td.note { color: var(--fg-2); font-size: 13px; max-width: 32ch; }
+td .link { font: inherit; font-size: 13px; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; }
+
+.empty { padding: 36px 16px; text-align: center; color: var(--fg-2); background: var(--paper); border: 1px dashed var(--line); border-radius: 10px; }
+.empty b { color: var(--fg); display: block; font-family: var(--display); font-size: 18px; margin-bottom: 6px; }
+
+dialog { border: 0; border-radius: 12px; padding: 0; width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 32px); background: var(--paper); color: var(--fg); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+dialog::backdrop { background: rgba(10,20,16,.45); }
+dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 32px); }
+.dhead { padding: 16px 20px 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.dhead h3 { margin: 0; font-family: var(--display); font-size: 18px; }
+.dbody { padding: 16px 20px; overflow-y: auto; display: grid; gap: 16px; }
+.field label.lab, .group > .lab { display: block; font-size: 12px; color: var(--fg-2); letter-spacing: .06em; margin-bottom: 6px; }
+input[type="text"], input[type="date"], input[type="number"], select, textarea { font: inherit; width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--fg); }
+.pill { font: inherit; font-size: 12px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--fg-2); cursor: pointer; }
+.pill.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+.cat .tablewrap { border: 0; border-radius: 0; }
+.cat details > summary { cursor: pointer; padding: 10px 16px; font-size: 13px; color: var(--accent); font-weight: 600; list-style: none; display: flex; align-items: center; gap: 6px; }
+.cat details > summary::-webkit-details-marker { display: none; }
+.cat details > summary::before { content: '›'; display: inline-block; transition: transform .15s; font-size: 15px; }
+.cat details[open] > summary::before { transform: rotate(90deg); }
+.cat h2 .sum .btn { font-size: 13px; padding: 4px 10px; margin-left: 8px; }
+textarea { min-height: 64px; resize: vertical; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+label.opt { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 7px; cursor: pointer; background: var(--bg); }
+label.opt:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+label.opt input { margin: 0; accent-color: var(--accent); }
+.group h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.group + .group { border-top: 1px solid var(--line); padding-top: 12px; }
+.dfoot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.dfoot .right { display: flex; gap: 8px; }
+.err { color: var(--warn); font-size: 13px; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">栖心一班 · 班级建设工具包 · <a href="./" class="backlink">班级看板 ›</a></div>
+      <h1 id="pageTitle">班委和微岗位</h1>
+      <div class="src" id="pageSrc">岗位清单取自《静心学堂班级手册 2.0》附录一·第一组第 3 项。每人至少认领 1 项，可轮换，可多人协作。</div>
+    </div>
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">连接中…</span></div>
+  </header>
+
+  <div class="tiles" id="tiles">
+    <div class="tile"><div class="k">已报名</div><div class="v" id="tPeople">–<small>人</small></div></div>
+    <div class="tile"><div class="k">有人报名意愿</div><div class="v" id="tFilled">–<small>/ 20 岗</small></div></div>
+    <div class="tile"><div class="k">已定岗</div><div class="v" id="tTotal">–<small>/ 20 岗</small></div></div>
+    <div class="tile warn"><div class="k">待定岗</div><div class="v" id="tVacant">–<small>岗</small></div></div>
+  </div>
+
+  <div class="bar">
+    <div class="tabs" role="tablist" id="tabs">
+      <button role="tab" class="mg" aria-selected="false" data-view="notice" hidden>通知</button>
+      <button role="tab" class="mg" aria-selected="false" data-view="cal" hidden>日历</button>
+      <button role="tab" class="mg" aria-selected="false" data-view="res" hidden>资料</button>
+      <button role="tab" class="mg" aria-selected="false" data-view="roster" hidden>名单</button>
+      <button role="tab" id="tab-roles" aria-selected="true" data-view="roles">岗位</button>
+      <button role="tab" id="tab-people" class="mg" aria-selected="false" data-view="people" hidden>报名</button>
+    </div>
+    <div class="actions">
+      <button class="btn" id="manageBtn">班委管理</button>
+      <button class="btn" id="copyBtn" hidden>复制统计文本</button>
+      <button class="btn primary" id="addBtn" hidden>＋ 添加报名</button>
+      <button class="btn" id="exitBtn" hidden>退出管理</button>
+    </div>
+  </div>
+
+  <section class="view" id="noticeEd" hidden><div class="cat"><h2><span>看板通知 · 置顶</span><span class="sum">显示在看板顶部「通知 · 近期」，到期自动下架<button type="button" class="btn primary" id="ntAdd">＋ 快捷通知</button></span></h2><div id="ntTable"></div></div></section>
+  <section class="view" id="rosterEd" hidden><div class="cat"><h2><span>班级名单</span><span class="sum">报名、定岗都从这里选人<button type="button" class="btn" id="rsAdd">＋ 添加同学</button></span></h2><div id="rsSum" style="padding:8px 16px;font-size:13px;color:var(--fg-2)"></div><div id="rsTable"></div></div></section>
+  <section class="view" id="calEd" hidden><div class="cat"><h2><span>班级日历</span><span class="sum"><button type="button" class="pill on" data-f="event">班级事项</button> <button type="button" class="pill" data-f="birthday">生日</button><button type="button" class="btn" id="calAdd">＋ 添加</button></span></h2><div id="calTable"></div></div></section>
+  <section class="view" id="resEd" hidden><div class="cat"><h2><span>班级资料</span><span class="sum">显示在看板「班级资料」<button type="button" class="btn" id="resAdd">＋ 添加</button></span></h2><div id="resTable"></div></div></section>
+  <section class="view" id="view-roles"></section>
+  <section class="view" id="view-people" hidden></section>
+
+  <footer id="foot">班委：班长、各组组长、传灯 / 慈善 / 文传班委（依《静心学堂班级手册 2.0》）。微岗位：修学支持 5 岗 · 关怀服务 5 岗 · 传灯活动 5 岗 · 班级共建 5 岗，共 20 个。每人至少认领 1 项，可轮换，可多人协作。</footer>
+</div>
+
+<dialog id="dlg">
+  <form id="form" method="dialog">
+    <div class="dhead"><h3 id="dlgTitle">添加报名</h3><button type="button" class="btn" id="closeBtn">关闭</button></div>
+    <div class="dbody">
+      <div class="field"><label class="lab" for="fName">同学（从班级名单选；名单在管理页维护）</label><select id="fName" required><option value="">请选择…</option></select></div>
+      <div id="fRoles"></div>
+      <div class="field"><label class="lab" for="fOther">其他岗位或说明</label><input type="text" id="fOther" autocomplete="off" placeholder="清单之外想承担的事，可留空"></div>
+      <div class="field"><label class="lab" for="fNote">对承担班委的想法 / 备注</label><textarea id="fNote"></textarea></div>
+      <div class="field"><label class="lab" for="fKey">班委口令（修改报名需要，本机会记住）</label><input type="text" id="fKey" name="qx-committee-code" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="由班委提供"></div>
+      <div class="err" id="fErr" hidden></div>
+    </div>
+    <div class="dfoot">
+      <div><button type="button" class="btn danger" id="delBtn" hidden>删除此人</button></div>
+      <div class="right"><button type="button" class="btn" id="cancelBtn">取消</button><button type="submit" class="btn primary" id="saveBtn">保存</button></div>
+    </div>
+  </form>
+</dialog>
+<dialog id="rsdlg">
+  <form id="rsform" method="dialog">
+    <div class="dhead"><h3 id="rsTitle">添加同学</h3><button type="button" class="btn" id="rsclose">关闭</button></div>
+    <div class="dbody">
+      <div class="field"><label class="lab" for="rsName">称呼（页面上显示的名字）</label><input type="text" id="rsName" autocomplete="off" required></div>
+      <div class="field"><label class="lab" for="rsRole">身份</label><select id="rsRole"><option value="学员">学员</option><option value="辅导团队">辅导团队</option></select></div>
+      <div class="field"><label class="lab" for="rsGroup">组别</label><select id="rsGroup"><option value="">不分组</option><option value="1组">1 组</option><option value="2组">2 组</option></select></div>
+      <div class="field"><label class="lab" for="rsStatus">状态</label><select id="rsStatus"><option value="在读">在读</option><option value="在任">在任（辅导团队）</option><option value="休学">休学</option><option value="转班">转班</option><option value="退出">退出</option></select></div>
+      <div class="group"><div class="lab">生日（写入班级日历；看板只显示月/日）</div>
+        <div class="field"><input type="date" id="rsBday" aria-label="生日"></div>
+        <div class="opts" style="margin-top:6px"><label class="opt"><input type="checkbox" id="rsNoYear">年份不详</label><label class="opt"><input type="checkbox" id="rsLunar">农历</label><button type="button" class="btn" id="rsBdayClear" style="font-size:12px;padding:4px 10px">清除生日</button></div>
+      </div>
+      <div class="field"><label class="lab" for="rsNote">备注（可选，仅班委可见）</label><input type="text" id="rsNote" autocomplete="off"></div>
+      <div class="err" id="rsErr" hidden></div>
+    </div>
+    <div class="dfoot"><div><button type="button" class="btn danger" id="rsDel" hidden>删除</button></div><div class="right"><button type="button" class="btn" id="rscancel">取消</button><button type="submit" class="btn primary" id="rssave">保存</button></div></div>
+  </form>
+</dialog>
+<dialog id="ndlg">
+  <form id="nform" method="dialog">
+    <div class="dhead"><h3 id="nTitle">快捷通知</h3><button type="button" class="btn" id="nclose">关闭</button></div>
+    <div class="dbody">
+      <div class="field"><label class="lab" for="nText">通知内容</label><textarea id="nText" required placeholder="例：本周四晚组修改到线上，请提前 5 分钟进会议室。"></textarea></div>
+      <div class="field"><label class="lab" for="nNote">补充说明（可选，小字显示）</label><input type="text" id="nNote" autocomplete="off"></div>
+      <div class="field"><label class="lab" for="nLink">链接（可选，可多选）</label><div class="linkpick" id="nLinks"></div><textarea id="nLink" rows="2" placeholder="其他链接：每行一个，可写「名称 | https://…」" style="margin-top:6px"></textarea></div>
+      <div class="field"><label class="lab" for="nUntil">显示到（含当天；留空=长期）</label><input type="date" id="nUntil"></div>
+      <div class="opts"><label class="opt"><input type="checkbox" id="nImp">标为重要（看板上红色标记、排最前）</label></div>
+      <div class="sum" id="nRef" style="font-size:12px;color:var(--fg-2)"></div>
+      <div class="err" id="nErr" hidden></div>
+    </div>
+    <div class="dfoot"><div><button type="button" class="btn danger" id="nDel" hidden>下架</button></div><div class="right"><button type="button" class="btn" id="ncancel">取消</button><button type="submit" class="btn primary" id="nsave">保存</button></div></div>
+  </form>
+</dialog>
+<dialog id="cdlg">
+  <form id="cform" method="dialog">
+    <div class="dhead"><h3 id="cTitle">添加日程</h3><button type="button" class="btn" id="cclose">关闭</button></div>
+    <div class="dbody">
+      <div class="group"><div class="lab">类型</div><div class="opts"><label class="opt"><input type="radio" name="ckind" value="event" checked>班级事项</label><label class="opt"><input type="radio" name="ckind" value="birthday">生日</label></div></div>
+      <div class="field"><label class="lab" for="cName">标题 / 称呼</label><input type="text" id="cName" autocomplete="off" required></div>
+      <div class="field"><label class="lab" for="cDate">日期</label><input type="date" id="cDate" required></div>
+      <div class="opts"><label class="opt"><input type="checkbox" id="cNoYear">年份不详（只记月日）</label><label class="opt"><input type="checkbox" id="cLunar">这是农历日期</label></div>
+      <div class="field"><label class="lab" for="cRepeat">重复</label><select id="cRepeat"><option value="none">一次</option><option value="yearly">每年</option><option value="weekly">每周（按所选日期的星期几，从该日起）</option></select></div>
+      <div class="field"><label class="lab" for="cTime">时间（可选）</label><input type="text" id="cTime" autocomplete="off" placeholder="如 19:30"></div>
+      <div class="field"><label class="lab" for="cNote">备注（可选，会显示）</label><input type="text" id="cNote" autocomplete="off"></div>
+      <div class="err" id="cErr" hidden></div>
+    </div>
+    <div class="dfoot"><div><button type="button" class="btn danger" id="cDel" hidden>删除</button></div><div class="right"><button type="button" class="btn" id="ccancel">取消</button><button type="submit" class="btn primary" id="csave">保存</button></div></div>
+  </form>
+</dialog>
+<dialog id="rdlg">
+  <form id="rform" method="dialog">
+    <div class="dhead"><h3 id="rTitle">添加资料</h3><button type="button" class="btn" id="rclose">关闭</button></div>
+    <div class="dbody">
+      <div class="field"><label class="lab" for="rName">标题</label><input type="text" id="rName" autocomplete="off" required></div>
+      <div class="field"><label class="lab" for="rUrl">链接</label><input type="text" id="rUrl" autocomplete="off" placeholder="https://… 或本站页面如 班费公示.html#rules" required></div>
+      <div class="field"><label class="lab" for="rNote">一句话说明（可选）</label><input type="text" id="rNote" autocomplete="off"></div>
+      <div class="field"><label class="lab" for="rSort">排序（数字小的在前）</label><input type="number" id="rSort" value="50"></div>
+      <div class="err" id="rErr" hidden></div>
+    </div>
+    <div class="dfoot"><div><button type="button" class="btn danger" id="rDel" hidden>删除</button></div><div class="right"><button type="button" class="btn" id="rcancel">取消</button><button type="submit" class="btn primary" id="rsave">保存</button></div></div>
+  </form>
+</dialog>
+<dialog id="adlg">
+  <form id="aform" method="dialog">
+    <div class="dhead"><h3 id="aTitle">定岗</h3><button type="button" class="btn" id="aclose">关闭</button></div>
+    <div class="dbody">
+      <div class="group"><div class="lab">从班级名单中选（可多选）</div><div id="aOpts"></div></div>
+      <div class="err" id="aErr" hidden></div>
+    </div>
+    <div class="dfoot"><div></div><div class="right"><button type="button" class="btn" id="acancel">取消</button><button type="submit" class="btn primary" id="asave">保存定岗</button></div></div>
+  </form>
+</dialog>
+<dialog id="mdlg">
+  <form id="mform" method="dialog">
+    <div class="dhead"><h3>班委管理</h3><button type="button" class="btn" id="mclose">关闭</button></div>
+    <div class="dbody">
+      <div class="field"><label class="lab" for="mkey">班委口令</label><input type="text" id="mkey" name="qx-committee-code" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="由班委提供"></div>
+      <div class="err" id="merr" hidden></div>
+    </div>
+    <div class="dfoot"><div></div><div class="right"><button type="submit" class="btn primary" id="mgo">进入管理</button></div></div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="banfei.config.js"></script>
+<script src="gate.js"></script>
+<script>
+// 班委：只有「定岗」没有「报名意愿」（assignOnly）；岗位与职责依《静心学堂班级手册 2.0》班委组成（4＋小组数）；定岗同样存公开表「定岗」（bw1…）
+const CATS = [
+  { id: 'bw', name: '班委', assignOnly: true, roles: [
+    ['bw1', '班长', '统筹班级事务，组织班委会'],
+    ['bw2', '1 组组长', '提醒自修和共修，关心组员状态'],
+    ['bw3', '2 组组长', '提醒自修和共修，关心组员状态'],
+    ['bw4', '传灯班委', '推动兴趣小组、读书会，对接学堂项目／活动'],
+    ['bw5', '慈善班委', '推动庆生、关怀，统筹班费管理，让班级有温度'],
+    ['bw6', '文传班委', '记录班级活动，整理班级故事，带动修学分享'],
+  ]},
+  { id: 'xx', name: '修学支持类', roles: [
+    ['xx1', '共修提醒员', '共修前一天提醒本组成员'],
+    ['xx2', '资料小助手', '转发当周学习资料或链接'],
+    ['xx3', '计时协助', '共修时协助计时和流程提醒'],
+    ['xx4', '记录员', '记录交流重点、疑问和待跟进事项'],
+    ['xx5', '修学工具协助员', '帮助不熟悉工具的同修完成安装与操作'],
+  ]},
+  { id: 'gh', name: '关怀服务类', roles: [
+    ['gh1', '新同学欢迎员', '入班一周内主动问候'],
+    ['gh2', '庆生协助员', '协助准备祝福和流程'],
+    ['gh3', '缺课提醒员', '缺课当天或次日主动关心'],
+    ['gh4', '场地协助员', '线下共修前后协助布置和整理'],
+    ['gh5', '茶水接待员', '线下活动时协助接待与茶水'],
+  ]},
+  { id: 'cd', name: '传灯活动类', roles: [
+    ['cd1', '活动转发员', '协助转发兴趣小组、禅意活动、读书会等活动信息'],
+    ['cd2', '书友接待员', '活动时陪伴新朋友'],
+    ['cd3', '签到协助员', '活动现场签到和记录'],
+    ['cd4', '拍照记录员', '活动影像和素材记录'],
+    ['cd5', '反馈收集员', '活动后收集一句话反馈'],
+  ]},
+  { id: 'gj', name: '班级共建类', roles: [
+    ['gj1', '物资保管员', '保管常用物资、教材、桌牌'],
+    ['gj2', '班费管理员', '配合慈善班委做收支核对'],
+    ['gj3', '案例收集员', '收集班级问题和经验'],
+    ['gj4', '家庭连接员', '推动每周一素、安心茶室等轻量实践'],
+    ['gj5', '文传协助员', '配合文传班委整理活动记录和班级故事，分享修学心得'],
+  ]},
+];
+const ROLE = {}; CATS.forEach(c => c.roles.forEach(([id, name, desc]) => ROLE[id] = { id, name, desc, cat: c.name, assignOnly: !!c.assignOnly }));
+const MICRO = Object.keys(ROLE).filter(r => !ROLE[r].assignOnly), BW = Object.keys(ROLE).filter(r => ROLE[r].assignOnly);
+const TOTAL_ROLES = MICRO.length;
+
+const API = (window.BANFEI_API || '').trim();
+const showDesc = new Set();
+let people = [], assigned = {}, roster = [], rsEditing = null, assigningRole = null, editingId = null, view = 'roles', manage = false, mkey = '';
+// 名单：报名和定岗都从这里选人；转班/退出的不出现在选择里
+const rosterById = id => roster.find(x => x.id === id);
+const rosterActive = () => roster.filter(x => x.status !== '转班' && x.status !== '退出');
+const rosterGroupOf = x => x.role === '辅导团队' ? '辅导团队' : (x.group || '未分组');
+const GROUP_ORDER = ['1组', '2组', '未分组', '辅导团队'];
+function rosterGrouped() { const g = {}; rosterActive().forEach(x => (g[rosterGroupOf(x)] = g[rosterGroupOf(x)] || []).push(x)); return GROUP_ORDER.filter(k => g[k]).map(k => [k, g[k].sort((a, b) => a.name.localeCompare(b.name, 'zh'))]); }
+const personLabel = x => x.name + (x.status === '休学' ? '（休学）' : '');
+const displayName = p => (p.pid && rosterById(p.pid) ? rosterById(p.pid).name : p.name);
+const assignedOf = r => assigned[r] || [];
+try { mkey = localStorage.getItem('wgw-key') || ''; } catch (_) {}
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function setStatus(kind, text) { const el = $('status'); el.className = 'status ' + kind; $('statusText').textContent = text; }
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2200); }
+
+function sortedPeople() { return [...people].map(p => Object.assign({}, p, { name: displayName(p) })).sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh')); }
+
+function render() {
+  const ps = sortedPeople();
+  const byRole = {}; Object.keys(ROLE).forEach(r => byRole[r] = []);
+  let total = 0;
+  ps.forEach(p => (p.roles || []).forEach(r => { if (byRole[r]) { byRole[r].push(p); total++; } }));
+  const filled = Object.values(byRole).filter(a => a.length).length;
+  const nAssigned = MICRO.filter(r => assignedOf(r).length).length;
+  $('tPeople').innerHTML = ps.length + '<small>人</small>';
+  $('tFilled').innerHTML = filled + '<small>/ ' + TOTAL_ROLES + ' 岗</small>';
+  $('tTotal').innerHTML = nAssigned + '<small>/ ' + TOTAL_ROLES + ' 岗</small>';
+  $('tVacant').innerHTML = (TOTAL_ROLES - nAssigned) + '<small>岗</small>';
+
+  // 按岗位
+  $('view-roles').innerHTML = CATS.map(c => {
+    const catAssigned = c.roles.filter(([id]) => assignedOf(id).length).length;
+    const sum = c.assignOnly ? `${catAssigned} / ${c.roles.length} 岗已定` : `${catAssigned} / ${c.roles.length} 岗已定 · ${c.roles.reduce((n, [id]) => n + byRole[id].length, 0)} 人次有意愿`;
+    const head = c.assignOnly ? '' : '<div class="role head"><span>岗位</span><span>定岗</span><span>报名意愿</span></div>';
+    return `<div class="cat${c.assignOnly ? ' bw' : ''}" data-cat="${c.id}"><h2><span>${c.name}</span><span class="sum">${sum}<button type="button" class="pill" data-desc="${c.id}">职责</button></span></h2>` + head +
+      (c.assignOnly ? '<div class="bwgrid">' + c.roles.map(([id, name, desc]) => {
+        const asg = assignedOf(id);
+        return `<div class="bwcell"><div class="name" title="${esc(desc)}">${name}</div><div class="people">${asg.map(n => `<span class="chip on">${esc(n)}</span>`).join('') || '<span class="vacant">待定</span>'}${manage ? `<button class="link" data-assign="${id}">编辑</button>` : ''}</div><div class="desc">${desc}</div></div>`;
+      }).join('') + '</div>' : '') +
+      (c.assignOnly ? [] : c.roles).map(([id, name, desc]) => {
+        const list = byRole[id], asg = assignedOf(id);
+        const asgCol = `<div class="col"><div class="cl">${c.assignOnly ? '承担人' : '定岗'}</div><div class="people">${asg.map(n => `<span class="chip on">${esc(n)}</span>`).join('') || '<span class="vacant">待定</span>'}${manage ? `<button class="link" data-assign="${id}">编辑</button>` : ''}</div></div>`;
+        const willCol = c.assignOnly ? '' : `<div class="col"><div class="cl">报名意愿 · ${list.length}</div><div class="people">${list.length ? list.map(p => chip(p)).join('') : '<span class="vacant">暂无</span>'}</div></div>`;
+        return `<div class="role"><div class="name" title="${esc(desc)}"><span>${name}</span><span class="count ${asg.length ? '' : 'zero'}">${asg.length ? '已定' : '待定'}</span></div>` +
+          `<div class="cols">${asgCol}${willCol}</div>` +
+          `<div class="desc">${desc}</div></div>`;
+      }).join('') + '</div>';
+  }).join('');
+  document.querySelectorAll('#view-roles .cat').forEach(el => el.classList.toggle('showdesc', showDesc.has(el.dataset.cat)));
+
+  // 按人员（仅班委管理模式，含备注）
+  if (!manage) { $('view-people').innerHTML = ''; } else if (!ps.length) {
+    $('view-people').innerHTML = `<div class="empty"><b>还没有报名记录</b>点右上角「添加报名」录入第一位同学，或等待数据加载。</div>`;
+  } else {
+    $('view-people').innerHTML = `<div class="tablewrap"><table><thead><tr><th>姓名</th><th>认领岗位</th><th>其他 / 备注</th><th></th></tr></thead><tbody>` +
+      ps.map(p => `<tr><td><b>${esc(p.name)}</b></td>` +
+        `<td><div class="cell-chips">${(p.roles || []).map(r => ROLE[r] ? `<span class="tag">${ROLE[r].name}</span>` : '').join('')}${p.other ? `<span class="tag t">其他：${esc(p.other)}</span>` : ''}${!(p.roles || []).length && !p.other ? '<span class="vacant">尚未认领</span>' : ''}</div></td>` +
+        `<td class="note">${esc(p.note)}</td>` +
+        `<td><button class="link" data-edit="${esc(p.id)}">编辑</button></td></tr>`).join('') +
+      `</tbody></table></div>`;
+  }
+
+}
+function chip(p, label) { return manage ? `<button class="chip" data-edit="${esc(p.id)}">${label || esc(p.name)}</button>` : `<span class="chip">${label || esc(p.name)}</span>`; }
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-edit]');
+  if (b) openEditor(b.dataset.edit);
+});
+
+// Tabs
+// tab → section；公开模式只有「岗位」。统计 tiles 和页脚只在 岗位/报名 两个 tab 显示
+const VIEWS = { notice: 'noticeEd', cal: 'calEd', res: 'resEd', roster: 'rosterEd', roles: 'view-roles', people: 'view-people' };
+function showView(v) {
+  if (!VIEWS[v] || (!manage && v !== 'roles')) v = 'roles';
+  view = v;
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.view === v));
+  Object.entries(VIEWS).forEach(([k, id]) => $(id).hidden = k !== v);
+  const rolesish = v === 'roles' || v === 'people'; $('tiles').hidden = !rolesish; $('foot').hidden = !rolesish; $('copyBtn').hidden = !(manage && rolesish); $('addBtn').hidden = !(manage && rolesish);
+  if (manage) try { localStorage.setItem('wgw-view', v); } catch (_) {}
+}
+const storedView = () => { try { return localStorage.getItem('wgw-view') || 'roles'; } catch (_) { return 'roles'; } };
+document.querySelectorAll('.tabs button').forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.view)));
+showView('roles');
+
+// 班级日历 / 班级资料（班委管理）：读写公开表「日历」「资料」
+let calItems = [], calF = 'event', calEditing = null, resItems = [], resEditing = null;
+const WDN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+const REP = { none: '一次', yearly: '每年', weekly: '每周' };
+async function loadCal() { try { const r = await apiPost({ action: 'calendar', key: mkey }); calItems = r && r.ok ? (r.items || []) : []; } catch (_) { calItems = []; } renderCalEd(); if (manage) renderRoster(); }
+async function loadRes() { try { const r = await apiPost({ action: 'resources', key: mkey }); resItems = r && r.ok ? (r.items || []) : []; } catch (_) { resItems = []; } renderResEd(); }
+function calDateLabel(i) {
+  const [y, m, d] = String(i.date).split('-');
+  if (i.repeat === 'weekly') { const dt = new Date(+y || 2000, +m - 1, +d); return '每' + WDN[dt.getDay()] + '（自 ' + +m + '/' + +d + '）'; }
+  return (i.lunar ? '农历 ' : '') + (+y ? y + '-' + m + '-' + d : +m + '/' + +d) + (i.lunar ? '' : '');
+}
+function renderCalEd() {
+  const rows = calItems.filter(i => (i.kind === 'birthday') === (calF === 'birthday'))
+    .sort((a, b) => (calF === 'birthday' ? a.date.slice(5).localeCompare(b.date.slice(5)) : a.date.localeCompare(b.date)));
+  document.querySelectorAll('#calEd .pill').forEach(b => b.classList.toggle('on', b.dataset.f === calF));
+  $('calTable').innerHTML = rows.length
+    ? `<div class="tablewrap"><table><thead><tr><th>日期</th><th>${calF === 'birthday' ? '称呼' : '标题'}</th><th>重复</th><th>时间</th><th>备注</th><th></th></tr></thead><tbody>` +
+      rows.map(i => `<tr><td>${esc(calDateLabel(i))}</td><td><b>${esc(i.title)}</b></td><td>${REP[i.repeat] || ''}</td><td>${esc(i.time)}</td><td class="note">${esc(i.note)}</td><td style="white-space:nowrap"><button class="link" data-cedit="${esc(i.id)}">编辑</button> <button class="link" data-pincal="${esc(i.id)}">${ntByRef('cal:' + i.id) ? '已置顶' : '置顶'}</button></td></tr>`).join('') + '</tbody></table></div>'
+    : `<div class="empty" style="padding:18px">还没有${calF === 'birthday' ? '生日' : '班级事项'}，点「添加」录入。</div>`;
+}
+document.querySelectorAll('#calEd .pill').forEach(b => b.addEventListener('click', () => { calF = b.dataset.f; renderCalEd(); }));
+function openCal(id) {
+  const i = id ? calItems.find(x => x.id === id) : null; calEditing = i ? i.id : null;
+  $('cTitle').textContent = i ? '修改日程 · ' + i.title : '添加日程';
+  document.querySelector(`input[name=ckind][value=${i ? i.kind : calF}]`).checked = true;
+  $('cName').value = i ? i.title : '';
+  const [y, m, d] = i ? i.date.split('-') : ['', '', ''];
+  $('cDate').value = i ? ((+y ? y : '2000') + '-' + m + '-' + d) : ''; $('cNoYear').checked = !!(i && !+y); $('cLunar').checked = !!(i && i.lunar);
+  $('cRepeat').value = i ? (i.repeat || 'none') : (calF === 'birthday' ? 'yearly' : 'none');
+  $('cTime').value = i ? i.time : ''; $('cNote').value = i ? i.note : '';
+  $('cDel').hidden = !i; $('cDel').textContent = '删除'; $('cDel').dataset.armed = ''; $('cErr').hidden = true;
+  $('cdlg').showModal();
+}
+document.querySelectorAll('input[name=ckind]').forEach(r => r.addEventListener('change', () => { if (!calEditing) $('cRepeat').value = r.value === 'birthday' ? 'yearly' : 'none'; }));
+$('calAdd').addEventListener('click', () => openCal(null));
+$('cclose').addEventListener('click', () => $('cdlg').close()); $('ccancel').addEventListener('click', () => $('cdlg').close());
+$('cform').addEventListener('submit', async ev => {
+  ev.preventDefault(); if (!API) return;
+  const kind = document.querySelector('input[name=ckind]:checked').value, dv = $('cDate').value;
+  if (!dv) { $('cErr').textContent = '请选日期。'; $('cErr').hidden = false; return; }
+  const item = { id: calEditing || undefined, kind, title: $('cName').value.trim(), date: ($('cNoYear').checked ? '0000' : dv.slice(0, 4)) + dv.slice(4), lunar: $('cLunar').checked,
+    repeat: $('cRepeat').value, time: $('cTime').value.trim(), note: $('cNote').value.trim() };
+  $('csave').disabled = true;
+  try { const r = await apiPost({ action: 'calendar_set', key: mkey, item }); if (!r.ok) throw new Error(r.error || '保存失败');
+    const k = calItems.findIndex(x => x.id === r.item.id); if (k >= 0) calItems[k] = r.item; else calItems.push(r.item);
+    $('cdlg').close(); toast('已保存，看板刷新即见'); renderCalEd(); }
+  catch (err) { $('cErr').textContent = err?.message || '保存失败'; $('cErr').hidden = false; }
+  finally { $('csave').disabled = false; }
+});
+$('cDel').addEventListener('click', async () => {
+  const b = $('cDel'); if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = '再点一次确认删除'; return; }
+  b.disabled = true;
+  try { const r = await apiPost({ action: 'calendar_delete', key: mkey, id: calEditing }); if (!r.ok) throw new Error(r.error); calItems = calItems.filter(x => x.id !== calEditing); $('cdlg').close(); toast('已删除'); renderCalEd(); }
+  catch (err) { $('cErr').textContent = '删除失败：' + (err?.message || ''); $('cErr').hidden = false; }
+  finally { b.disabled = false; }
+});
+function renderResEd() {
+  $('resTable').innerHTML = resItems.length
+    ? `<div class="tablewrap"><table><thead><tr><th>排序</th><th>标题</th><th>链接</th><th>说明</th><th></th></tr></thead><tbody>` +
+      resItems.map(i => `<tr><td>${i.sort}</td><td><b>${esc(i.title)}</b></td><td class="note"><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.url.length > 48 ? i.url.slice(0, 46) + '…' : i.url)}</a></td><td class="note">${esc(i.note)}</td><td style="white-space:nowrap"><button class="link" data-redit="${esc(i.id)}">编辑</button> <button class="link" data-pinres="${esc(i.id)}">${ntByRef('res:' + i.id) ? '已置顶' : '置顶'}</button></td></tr>`).join('') + '</tbody></table></div>'
+    : '<div class="empty" style="padding:18px">还没有资料链接，点「添加」录入（看板会先显示页内默认的几条）。</div>';
+}
+function openRes(id) {
+  const i = id ? resItems.find(x => x.id === id) : null; resEditing = i ? i.id : null;
+  $('rTitle').textContent = i ? '修改资料 · ' + i.title : '添加资料';
+  $('rName').value = i ? i.title : ''; $('rUrl').value = i ? i.url : ''; $('rNote').value = i ? i.note : ''; $('rSort').value = i ? i.sort : 50;
+  $('rDel').hidden = !i; $('rDel').textContent = '删除'; $('rDel').dataset.armed = ''; $('rErr').hidden = true;
+  $('rdlg').showModal();
+}
+$('resAdd').addEventListener('click', () => openRes(null));
+$('rclose').addEventListener('click', () => $('rdlg').close()); $('rcancel').addEventListener('click', () => $('rdlg').close());
+$('rform').addEventListener('submit', async ev => {
+  ev.preventDefault(); if (!API) return;
+  const item = { id: resEditing || undefined, title: $('rName').value.trim(), url: $('rUrl').value.trim(), note: $('rNote').value.trim(), sort: +$('rSort').value || 0 };
+  $('rsave').disabled = true;
+  try { const r = await apiPost({ action: 'resource_set', key: mkey, item }); if (!r.ok) throw new Error(r.error || '保存失败');
+    const k = resItems.findIndex(x => x.id === r.item.id); if (k >= 0) resItems[k] = r.item; else resItems.push(r.item);
+    resItems.sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title));
+    $('rdlg').close(); toast('已保存，看板刷新即见'); renderResEd(); }
+  catch (err) { $('rErr').textContent = err?.message || '保存失败'; $('rErr').hidden = false; }
+  finally { $('rsave').disabled = false; }
+});
+$('rDel').addEventListener('click', async () => {
+  const b = $('rDel'); if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = '再点一次确认删除'; return; }
+  b.disabled = true;
+  try { const r = await apiPost({ action: 'resource_delete', key: mkey, id: resEditing }); if (!r.ok) throw new Error(r.error); resItems = resItems.filter(x => x.id !== resEditing); $('rdlg').close(); toast('已删除'); renderResEd(); }
+  catch (err) { $('rErr').textContent = '删除失败：' + (err?.message || ''); $('rErr').hidden = false; }
+  finally { b.disabled = false; }
+});
+document.addEventListener('click', e => { const c = e.target.closest('[data-cedit]'); if (c) openCal(c.dataset.cedit); const r = e.target.closest('[data-redit]'); if (r) openRes(r.dataset.redit); });
+
+// 班级名单管理（班委）
+// 名单 ↔ 日历生日行：id 为 bd-<pid>；首批灌入的生日行 id 是 b01…b22，对应名单 p01…p22；再退一步按称呼匹配
+const birthdayOf = x => (typeof calItems !== 'undefined' ? calItems : []).find(c => c.kind === 'birthday' && (c.id === 'bd-' + x.id || c.id === 'b' + String(x.id).slice(1) || c.title === x.name));
+const bdayLabel = c => { if (!c) return ''; const [y, m, d] = c.date.split('-'); return (c.lunar ? '农历' : '') + +m + '/' + +d + (+y ? '' : ''); };
+function renderRoster() {
+  const act = rosterActive().length, stu = roster.filter(x => x.role !== '辅导团队' && x.status === '在读').length;
+  $('rsSum').textContent = roster.length ? `名单 ${roster.length} 人（在读学员 ${stu} · 可选 ${act}）` : '名单还是空的';
+  const rows = [...roster].sort((a, b) => GROUP_ORDER.indexOf(rosterGroupOf(a)) - GROUP_ORDER.indexOf(rosterGroupOf(b)) || a.name.localeCompare(b.name, 'zh'));
+  $('rsTable').innerHTML = rows.length
+    ? `<div class="tablewrap"><table><thead><tr><th>称呼</th><th>身份</th><th>组别</th><th>状态</th><th>生日</th><th>备注</th><th></th></tr></thead><tbody>` +
+      rows.map(x => `<tr style="${x.status === '转班' || x.status === '退出' ? 'opacity:.5' : ''}"><td><b>${esc(x.name)}</b></td><td>${esc(x.role)}</td><td>${esc(x.group)}</td><td>${esc(x.status)}</td><td>${esc(bdayLabel(birthdayOf(x))) || '<span class="vacant">—</span>'}</td><td class="note">${esc(x.note)}</td><td><button class="link" data-rsedit="${esc(x.id)}">编辑</button></td></tr>`).join('') + '</tbody></table></div>'
+    : '<div class="empty" style="padding:18px">名单还是空的。点「添加同学」录入，报名和定岗才能选到人。</div>';
+}
+function openRoster(id) {
+  const x = id ? rosterById(id) : null; rsEditing = x ? x.id : null;
+  $('rsTitle').textContent = x ? '修改 · ' + x.name : '添加同学';
+  $('rsName').value = x ? x.name : ''; $('rsRole').value = x ? x.role : '学员'; $('rsGroup').value = x ? x.group : ''; $('rsStatus').value = x ? x.status : '在读'; $('rsNote').value = x ? x.note : '';
+  const bd = x ? birthdayOf(x) : null, [by, bm, bdd] = bd ? bd.date.split('-') : ['', '', ''];
+  $('rsBday').value = bd ? ((+by ? by : '2000') + '-' + bm + '-' + bdd) : ''; $('rsNoYear').checked = !!(bd && !+by); $('rsLunar').checked = !!(bd && bd.lunar);
+  $('rsDel').hidden = !x; $('rsDel').textContent = '删除'; $('rsDel').dataset.armed = ''; $('rsErr').hidden = true;
+  $('rsdlg').showModal();
+}
+$('rsAdd').addEventListener('click', () => openRoster(null));
+$('rsclose').addEventListener('click', () => $('rsdlg').close()); $('rscancel').addEventListener('click', () => $('rsdlg').close());
+$('rsRole').addEventListener('change', () => { if (!rsEditing) $('rsStatus').value = $('rsRole').value === '辅导团队' ? '在任' : '在读'; });
+$('rsBdayClear').addEventListener('click', () => { $('rsBday').value = ''; $('rsNoYear').checked = false; $('rsLunar').checked = false; });
+$('rsform').addEventListener('submit', async ev => {
+  ev.preventDefault(); if (!API) return;
+  const item = { id: rsEditing || undefined, name: $('rsName').value.trim(), role: $('rsRole').value, group: $('rsGroup').value, status: $('rsStatus').value, note: $('rsNote').value.trim() };
+  $('rssave').disabled = true;
+  try { const r = await apiPost({ action: 'roster_set', key: mkey, item }); if (!r.ok) throw new Error(r.error || '保存失败');
+    const k = roster.findIndex(x => x.id === r.item.id); if (k >= 0) roster[k] = r.item; else roster.push(r.item);
+    // 生日同步到日历：有日期 → 写/覆盖该人的生日行；清空 → 删掉
+    const old = birthdayOf(r.item), dv = $('rsBday').value;
+    if (dv) {
+      const bitem = { id: old ? old.id : 'bd-' + r.item.id, kind: 'birthday', title: r.item.name, date: ($('rsNoYear').checked ? '0000' : dv.slice(0, 4)) + dv.slice(4), lunar: $('rsLunar').checked, repeat: 'yearly', time: '', note: old ? old.note : '' };
+      const br = await apiPost({ action: 'calendar_set', key: mkey, item: bitem }); if (!br.ok) throw new Error('名单已存，生日保存失败：' + (br.error || ''));
+      const ck = calItems.findIndex(c => c.id === br.item.id); if (ck >= 0) calItems[ck] = br.item; else calItems.push(br.item);
+    } else if (old) {
+      const dr = await apiPost({ action: 'calendar_delete', key: mkey, id: old.id }); if (!dr.ok) throw new Error('名单已存，生日删除失败：' + (dr.error || ''));
+      calItems = calItems.filter(c => c.id !== old.id);
+    }
+    $('rsdlg').close(); toast('已保存'); renderRoster(); renderCalEd(); render(); }
+  catch (err) { $('rsErr').textContent = err?.message || '保存失败'; $('rsErr').hidden = false; }
+  finally { $('rssave').disabled = false; }
+});
+$('rsDel').addEventListener('click', async () => {
+  const b = $('rsDel'); if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = '再点一次确认删除（建议改状态而不是删）'; return; }
+  b.disabled = true;
+  try { const r = await apiPost({ action: 'roster_delete', key: mkey, id: rsEditing }); if (!r.ok) throw new Error(r.error); roster = roster.filter(x => x.id !== rsEditing); $('rsdlg').close(); toast('已删除'); renderRoster(); render(); }
+  catch (err) { $('rsErr').textContent = '删除失败：' + (err?.message || ''); $('rsErr').hidden = false; }
+  finally { b.disabled = false; }
+});
+document.addEventListener('click', e => { const b = e.target.closest('[data-rsedit]'); if (b) openRoster(b.dataset.rsedit); const d = e.target.closest('[data-desc]'); if (d) { const id = d.dataset.desc; showDesc.has(id) ? showDesc.delete(id) : showDesc.add(id); render(); } });
+
+// 定岗编辑（班委）：从报名同学中勾选，或手填其他同学
+function openAssign(role) {
+  assigningRole = role; const cur = assignedOf(role), known = new Set(roster.map(x => x.name));
+  $('aTitle').textContent = (ROLE[role].assignOnly ? '承担人 · ' : '定岗 · ') + ROLE[role].name;
+  const groups = rosterGrouped().map(([g, xs]) => `<div class="group"><h4>${esc(g)}</h4><div class="opts">${xs.map(x => `<label class="opt"><input type="checkbox" name="an" value="${esc(x.name)}"${cur.includes(x.name) ? ' checked' : ''}>${esc(personLabel(x))}</label>`).join('')}</div></div>`);
+  const extra = cur.filter(n => !known.has(n));   // 名单里没有的旧名字：保留可取消
+  if (extra.length) groups.push(`<div class="group"><h4>不在名单里（取消勾选即移除）</h4><div class="opts">${extra.map(n => `<label class="opt"><input type="checkbox" name="an" value="${esc(n)}" checked>${esc(n)}</label>`).join('')}</div></div>`);
+  $('aOpts').innerHTML = groups.join('') || '<span class="vacant">班级名单还是空的，请先在「班级名单」里添加同学。</span>';
+  $('aErr').hidden = true; $('adlg').showModal();
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-assign]'); if (b && manage) openAssign(b.dataset.assign); });
+$('aclose').addEventListener('click', () => $('adlg').close()); $('acancel').addEventListener('click', () => $('adlg').close());
+$('aform').addEventListener('submit', async ev => {
+  ev.preventDefault(); if (!API || !assigningRole) return;
+  const names = [...new Set([...document.querySelectorAll('#aOpts input:checked')].map(i => i.value))];
+  $('asave').disabled = true;
+  try { const r = await apiPost({ action: 'assign_set', key: mkey, role: assigningRole, names }); if (!r.ok) throw new Error(r.error || '保存失败'); assigned[assigningRole] = r.names || names; $('adlg').close(); toast('已更新定岗'); render(); }
+  catch (err) { $('aErr').textContent = err?.message || '保存失败'; $('aErr').hidden = false; }
+  finally { $('asave').disabled = false; }
+});
+
+// Editor
+$('fRoles').innerHTML = CATS.filter(c => !c.assignOnly).map(c => `<div class="group"><h4>${c.name}</h4><div class="opts">${c.roles.map(([id, name]) => `<label class="opt" title="${ROLE[id].desc}"><input type="checkbox" name="role" value="${id}">${name}</label>`).join('')}</div></div>`).join('');
+
+function openEditor(id) {
+  editingId = id || null;
+  const p = id ? people.find(x => x.id === id) : null;
+  $('dlgTitle').textContent = p ? '修改报名 · ' + displayName(p) : '添加报名';
+  const sel = $('fName'), curPid = p ? (p.pid || (roster.find(x => x.name === p.name) || {}).id || '') : '';
+  sel.innerHTML = '<option value="">请选择…</option>' + rosterGrouped().map(([g, xs]) => `<optgroup label="${esc(g)}">${xs.map(x => `<option value="${esc(x.id)}">${esc(personLabel(x))}</option>`).join('')}</optgroup>`).join('') +
+    (p && !curPid ? `<option value="" selected>${esc(p.name)}（不在名单里，请改选）</option>` : '');
+  sel.value = curPid; if (p && !curPid) sel.selectedIndex = sel.options.length - 1;   // 旧记录不在名单里：显示原名并提示改选
+  $('fOther').value = p ? (p.other || '') : '';
+  $('fNote').value = p ? (p.note || '') : '';
+  document.querySelectorAll('#fRoles input').forEach(i => i.checked = !!(p && (p.roles || []).includes(i.value)));
+  $('delBtn').hidden = !p; $('delBtn').textContent = '删除此人'; $('delBtn').dataset.armed = '';
+  $('fErr').hidden = true;
+  $('fKey').value = mkey; $('fKey').closest('.field').hidden = !!mkey;
+  const ro = !API;
+  $('form').querySelectorAll('input, textarea, select').forEach(i => i.disabled = ro);
+  $('saveBtn').disabled = ro; $('delBtn').disabled = ro;
+  if (ro) { $('fErr').textContent = '还没有配置后端，当前只能查看。'; $('fErr').hidden = false; }
+  $('dlg').showModal();
+  if (!ro) $('fName').focus();
+}
+// 看板通知（公开表「通知」）：班委口令可改，看板顶部显示
+// 看板通知·置顶：多条，重要在前，到期自动下架；可从日历/资料一键置顶（ref=cal:<id> / res:<id>）
+let ntItems = [], ntEditing = null;
+const ymd = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+const today0 = () => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; };
+const addDays = (dt, n) => { const d = new Date(dt); d.setDate(d.getDate() + n); return d; };
+function nextOccDate(i) {   // 日历条目下一次发生的日期（农历生日页面没有换算表，退为两周）
+  const t = today0(), [y, m, d] = String(i.date).split('-').map(Number);
+  if (i.lunar) return addDays(t, 14);
+  if (i.repeat === 'weekly') { const wd = new Date(y || 2000, m - 1, d).getDay(), n = new Date(t); n.setDate(n.getDate() + (wd - n.getDay() + 7) % 7); return n; }
+  if (i.repeat === 'yearly') { let n = new Date(t.getFullYear(), m - 1, d); if (n < t) n = new Date(t.getFullYear() + 1, m - 1, d); return n; }
+  return new Date(y, m - 1, d);
+}
+const ntActive = n => !n.until || n.until >= ymd(today0());
+// 通知链接（可多个）：link 列每行一条「名称 | 链接」（名称可省）；勾选本站页面 / 班级资料，其他手填
+const SITE_LINKS = [['./', '班级看板'], ['./#cal', '看板 · 班级日历'], ['./#res', '看板 · 班级资料'], ['班费公示.html', '班费公示'], ['班费公示.html#rules', '班费规则（讨论稿）'], ['班委.html', '班委和微岗位']];
+const parseLinks = s => String(s || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const i = l.lastIndexOf(' | '); return i > 0 ? { t: l.slice(0, i).trim(), u: l.slice(i + 3).trim() } : { t: '', u: l }; });
+function fillLinkSel(cur) {
+  const have = parseLinks(cur), picked = new Set(have.map(l => l.u)), known = new Set();
+  const box = (u, l) => { known.add(u); return `<label><input type="checkbox" value="${esc(u)}" data-label="${esc(l)}"${picked.has(u) ? ' checked' : ''}>${esc(l)}</label>`; };
+  $('nLinks').innerHTML = '<div class="g">本站页面</div>' + SITE_LINKS.map(([u, l]) => box(u, l)).join('') + (resItems.length ? '<div class="g">班级资料</div>' + resItems.map(r => box(r.url, r.title)).join('') : '');
+  $('nLink').value = have.filter(l => !known.has(l.u)).map(l => l.t ? l.t + ' | ' + l.u : l.u).join('\n');
+}
+const pickedLink = () => [...$('nLinks').querySelectorAll('input:checked')].map(b => b.dataset.label + ' | ' + b.value).concat($('nLink').value.split('\n').map(l => l.trim()).filter(Boolean)).join('\n');
+const ntByRef = ref => ntItems.find(n => n.ref === ref && ntActive(n));
+async function loadNotice() { try { const r = await apiPost({ action: 'notice', key: mkey, all: true }); ntItems = r && r.ok ? (r.items || (r.text ? [{ id: '', text: r.text }] : [])) : []; } catch (_) { ntItems = []; } renderNt(); renderCalEd(); renderResEd(); }
+function ntSource(n) { const r = String(n.ref || ''); if (r.startsWith('cal:')) { const c = calItems.find(x => x.id === r.slice(4)); return '日历 · ' + (c ? c.title : '（已删）'); } if (r.startsWith('res:')) { const x = resItems.find(x => x.id === r.slice(4)); return '资料 · ' + (x ? x.title : '（已删）'); } return '手填'; }
+function renderNt() {
+  const rows = [...ntItems].sort((a, b) => (ntActive(b) - ntActive(a)) || (b.important - a.important) || (a.sort - b.sort));
+  $('ntTable').innerHTML = rows.length
+    ? `<div class="tablewrap"><table><thead><tr><th></th><th>内容</th><th>说明</th><th>显示到</th><th>来源</th><th></th></tr></thead><tbody>` +
+      rows.map(n => `<tr style="${ntActive(n) ? '' : 'opacity:.5'}"><td>${n.important ? '<span class="tag" style="background:var(--warn-soft);color:var(--warn)">重要</span>' : ''}</td><td><b>${esc(n.text)}</b>${parseLinks(n.link).map(l => ` <a href="${esc(l.u)}" target="_blank" rel="noopener" style="font-size:12px">${esc(l.t || '链接')}</a>`).join('')}</td><td class="note">${esc(n.note)}</td><td>${n.until ? esc(n.until.slice(5)) + (ntActive(n) ? '' : '（已过期）') : '长期'}</td><td class="note">${esc(ntSource(n))}</td><td><button class="link" data-nedit="${esc(n.id)}">编辑</button></td></tr>`).join('') + '</tbody></table></div>'
+    : '<div class="empty" style="padding:18px">还没有置顶通知。点「快捷通知」直接写一条，或在下面日历 / 资料的行上点「置顶」。</div>';
+}
+function openNt(n, preset) {
+  ntEditing = n ? n.id : null;
+  const v = n || Object.assign({ text: '', note: '', link: '', until: ymd(addDays(today0(), 14)), important: false, ref: '' }, preset || {});
+  $('nTitle').textContent = n ? '修改通知' : (v.ref ? '置顶到看板' : '快捷通知');
+  $('nText').value = v.text; $('nNote').value = v.note || ''; fillLinkSel(v.link || ''); $('nUntil').value = v.until || ''; $('nImp').checked = !!v.important;
+  $('nRef').textContent = v.ref ? '关联：' + ntSource(v) + '（看板上会自动带日期 / 链接）' : ''; $('ndlg').dataset.ref = v.ref || '';
+  $('nDel').hidden = !n; $('nDel').textContent = '下架'; $('nDel').dataset.armed = ''; $('nErr').hidden = true;
+  $('ndlg').showModal();
+}
+$('ntAdd').addEventListener('click', () => openNt(null));
+$('nclose').addEventListener('click', () => $('ndlg').close()); $('ncancel').addEventListener('click', () => $('ndlg').close());
+$('nform').addEventListener('submit', async ev => {
+  ev.preventDefault(); if (!API) return;
+  const item = { id: ntEditing || undefined, text: $('nText').value.trim(), note: $('nNote').value.trim(), link: pickedLink(), until: $('nUntil').value, important: $('nImp').checked, ref: $('ndlg').dataset.ref || '' };
+  $('nsave').disabled = true;
+  try { const r = await apiPost({ action: 'notice_set', key: mkey, item }); if (!r.ok) throw new Error(r.error || '保存失败');
+    const k = ntItems.findIndex(x => x.id === r.item.id); if (k >= 0) ntItems[k] = r.item; else ntItems.push(r.item);
+    $('ndlg').close(); toast('已置顶，看板刷新即见'); renderNt(); renderCalEd(); renderResEd(); }
+  catch (err) { $('nErr').textContent = err?.message || '保存失败'; $('nErr').hidden = false; }
+  finally { $('nsave').disabled = false; }
+});
+$('nDel').addEventListener('click', async () => {
+  const b = $('nDel'); if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = '再点一次确认下架'; return; }
+  b.disabled = true;
+  try { const r = await apiPost({ action: 'notice_delete', key: mkey, id: ntEditing }); if (!r.ok) throw new Error(r.error); ntItems = ntItems.filter(x => x.id !== ntEditing); $('ndlg').close(); toast('已下架'); renderNt(); renderCalEd(); renderResEd(); }
+  catch (err) { $('nErr').textContent = '下架失败：' + (err?.message || ''); $('nErr').hidden = false; }
+  finally { b.disabled = false; }
+});
+document.addEventListener('click', e => {
+  const ne = e.target.closest('[data-nedit]'); if (ne) { openNt(ntItems.find(x => x.id === ne.dataset.nedit)); return; }
+  const pc = e.target.closest('[data-pincal]'); if (pc) { const c = calItems.find(x => x.id === pc.dataset.pincal), ex = ntByRef('cal:' + c.id); if (ex) openNt(ex); else openNt(null, { text: c.title + (c.time ? ' ' + c.time : ''), until: ymd(nextOccDate(c)), ref: 'cal:' + c.id }); return; }
+  const pr = e.target.closest('[data-pinres]'); if (pr) { const x = resItems.find(x => x.id === pr.dataset.pinres), ex = ntByRef('res:' + x.id); if (ex) openNt(ex); else openNt(null, { text: x.title, note: x.note, link: x.url, ref: 'res:' + x.id }); }
+});
+// #manage → 岗位 tab；#manage-notice / -cal / -res / -roster / -people → 对应 tab
+const isManageHash = () => /^#manage(-|$)/.test(location.hash);
+function gotoManageSection() { const v = location.hash.slice(8); showView(VIEWS[v] ? v : 'roles'); }
+function setMode(on) {
+  manage = on;
+  $('manageBtn').hidden = on; $('exitBtn').hidden = !on;
+  document.querySelectorAll('.tabs .mg').forEach(b => b.hidden = !on);
+  $('pageTitle').textContent = on ? '班委管理' : '班委和微岗位'; document.title = on ? '栖心一班 班委管理' : '栖心一班 班委和微岗位';
+  $('pageSrc').textContent = on ? '看板通知 · 班级日历 · 班级资料 · 班级名单 · 岗位定岗与报名，改动即时同步到看板。' : '岗位清单取自《静心学堂班级手册 2.0》附录一·第一组第 3 项。每人至少认领 1 项，可轮换，可多人协作。';
+  if (on) { renderRoster(); Promise.all([loadCal(), loadRes()]).then(loadNotice); }
+  showView(on ? storedView() : 'roles');
+  render();
+}
+$('manageBtn').addEventListener('click', () => { $('merr').hidden = true; $('mkey').value = mkey; $('mdlg').showModal(); $('mkey').focus(); });
+$('mclose').addEventListener('click', () => $('mdlg').close());
+$('mform').addEventListener('submit', async e => {
+  e.preventDefault();
+  const k = $('mkey').value.trim(); if (!k) { $('merr').textContent = '请输入班委口令。'; $('merr').hidden = false; return; }
+  $('mgo').disabled = true;
+  try {
+    const r = await apiPost({ action: 'signup_ping', key: k });
+    if (r && r.ok && r.auth) { mkey = k; try { localStorage.setItem('wgw-key', k); } catch (_) {} $('mdlg').close(); setMode(true); toast('已进入班委管理'); load().then(gotoManageSection).catch(() => {}); }
+    else { $('merr').textContent = '口令不对。'; $('merr').hidden = false; }
+  } catch (_) { $('merr').textContent = '连不上服务器。'; $('merr').hidden = false; }
+  finally { $('mgo').disabled = false; }
+});
+$('exitBtn').addEventListener('click', () => { mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} if (isManageHash()) { history.replaceState(null, '', location.pathname); location.reload(); return; } setMode(false); });
+$('addBtn').addEventListener('click', () => openEditor(null));
+$('closeBtn').addEventListener('click', () => $('dlg').close());
+$('cancelBtn').addEventListener('click', () => $('dlg').close());
+
+function readForm() {
+  const who = rosterById($('fName').value);
+  return {
+    pid: who ? who.id : '', name: who ? who.name : '',
+    times: (editingId && (people.find(x => x.id === editingId) || {}).times) || [],   // 组修时间已不显示，编辑时原样保留
+    roles: [...document.querySelectorAll('#fRoles input:checked')].map(i => i.value),
+    other: $('fOther').value.trim(),
+    note: $('fNote').value.trim(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+let saving = false;
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (saving || !API) return;
+  const data = readForm();
+  if (!data.pid) { $('fErr').textContent = '请从班级名单里选同学；名单里没有的，先到「班级名单」添加。'; $('fErr').hidden = false; return; }
+  const key = $('fKey').value.trim();
+  if (!key) { $('fErr').textContent = '请输入班委口令。'; $('fErr').hidden = false; return; }
+  const dup = people.find(p => (p.pid ? p.pid === data.pid : p.name === data.name) && p.id !== editingId);
+  if (dup) { $('fErr').textContent = '这位同学已有报名记录，请直接点那条修改。'; $('fErr').hidden = false; return; }
+  saving = true; $('saveBtn').disabled = true;
+  try {
+    const r = await apiPost({ action: 'signup_set', key, person: { id: editingId || '', ...data } });
+    if (!r.ok) throw new Error(r.error || '保存失败，请稍后再试。');
+    try { localStorage.setItem('wgw-key', key); } catch (_) {}
+    $('dlg').close(); toast('已保存'); await load();
+  } catch (err) {
+    $('fErr').textContent = err?.message || '保存失败，请稍后再试。';
+    $('fErr').hidden = false;
+  } finally { saving = false; $('saveBtn').disabled = false; }
+});
+$('delBtn').addEventListener('click', async () => {
+  const b = $('delBtn');
+  if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = '再点一次确认删除'; return; }
+  if (!API || !editingId) return;
+  b.disabled = true;
+  const key = $('fKey').value.trim();
+  if (!key) { $('fErr').textContent = '请输入班委口令。'; $('fErr').hidden = false; b.disabled = false; return; }
+  try { const r = await apiPost({ action: 'signup_delete', key, id: editingId }); if (!r.ok) throw new Error(r.error); try { localStorage.setItem('wgw-key', key); } catch (_) {} $('dlg').close(); toast('已删除'); await load(); }
+  catch (err) { $('fErr').textContent = '删除失败：' + (err?.message || ''); $('fErr').hidden = false; }
+  finally { b.disabled = false; }
+});
+
+// Copy summary
+$('copyBtn').addEventListener('click', async () => {
+  const ps = sortedPeople();
+  const lines = ['栖心一班 班委和微岗位（' + new Date().toLocaleDateString('zh-CN') + '）', '已定岗 ' + Object.keys(ROLE).filter(r => assignedOf(r).length).length + ' / ' + TOTAL_ROLES + ' 岗 · ' + ps.length + ' 人提交了报名意愿', ''];
+  CATS.forEach(c => {
+    lines.push('【' + c.name + '】');
+    c.roles.forEach(([id, name]) => { const names = ps.filter(p => (p.roles || []).includes(id)).map(p => p.name), asg = assignedOf(id); lines.push('  ' + name + '：' + (c.assignOnly ? (asg.length ? asg.join('、') : '（待定）') : '定岗 ' + (asg.length ? asg.join('、') : '（待定）') + '；意愿 ' + (names.length ? names.join('、') : '（无）'))); });
+    lines.push('');
+  });
+  const text = lines.join('\n');
+  try { await navigator.clipboard.writeText(text); toast('已复制到剪贴板'); }
+  catch (_) {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    toast('请按 Ctrl/Cmd+C 复制'); setTimeout(() => ta.remove(), 8000);
+  }
+});
+
+// Data（Google Sheet via Apps Script；见 scripts/banfei/README.md）
+async function apiPost(body) {
+  const r = await fetch(API, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+  return r.json();
+}
+async function load() {
+  const r = (manage || isManageHash()) && mkey ? await apiPost({ action: 'signups', key: mkey }) : await QX.api('signups');
+  if (!r.ok) throw new Error(r.error || '读取失败');
+  people = r.people || []; assigned = r.assigned || {}; roster = r.roster || []; render(); if (manage) renderRoster(); setStatus('on', '已连接 · 报名 ' + people.length + ' 人');
+}
+render();
+if (!API) { setStatus('ro', '未配置后端 · 只读'); $('manageBtn').disabled = true; }
+else {
+  setStatus('ro', '读取中…');
+  (async () => {
+    // 班委入口（#manage）：只问班委口令，不经班级口令
+    if (isManageHash()) {
+      if (mkey) { try { const r = await apiPost({ action: 'signup_ping', key: mkey }); if (r && r.ok && r.auth) { setMode(true); await load(); gotoManageSection(); return; } } catch (_) {} mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} }
+      setStatus('ro', '请输入班委口令'); $('manageBtn').click(); return;
+    }
+    // 全班入口：班级口令后进入展示模式；本机已有有效班委口令则直接进管理
+    await QX.ready(); await load();
+    if (mkey) { try { const r = await apiPost({ action: 'signup_ping', key: mkey }); if (r && r.ok && r.auth) setMode(true); else { mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} } } catch (_) {} }
+  })().catch(() => setStatus('ro', '连接失败 · 请刷新'));
+  setInterval(() => { if (!$('dlg').open) load().catch(() => {}); }, 60000);
+}
+</script>
+</body>
+</html>
