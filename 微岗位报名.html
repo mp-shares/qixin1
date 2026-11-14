@@ -73,7 +73,15 @@ section.view[hidden] { display: none; }
 .cat h2 { font-family: var(--display); font-size: 17px; font-weight: 600; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .cat h2 .sum { font-family: var(--body); font-size: 13px; color: var(--fg-2); font-weight: 400; font-variant-numeric: tabular-nums; }
 .role { display: grid; grid-template-columns: 132px minmax(0,1fr) minmax(0,1fr); gap: 4px 14px; padding: 7px 16px; border-top: 1px solid var(--line); align-items: center; }
-.cat.bw .role { grid-template-columns: 132px minmax(0,1fr); }
+/* 班委：岗位横向展开，一格一岗（岗位名在上、承担人在下）；窄屏自动折行 */
+.bwgrid { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 1px; background: var(--line); }
+.bwcell { background: var(--paper); padding: 9px 12px 10px; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.bwcell .name { font-weight: 500; font-size: 13.5px; }
+.bwcell .people { align-items: center; }
+.bwcell .desc { display: none; color: var(--fg-2); font-size: 12px; line-height: 1.5; }
+.cat.showdesc .bwcell .desc { display: block; }
+@media (max-width: 760px) { .bwgrid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (max-width: 460px) { .bwgrid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 .role.head { padding: 5px 16px; font-size: 11px; color: var(--fg-2); letter-spacing: .06em; background: var(--paper-2); border-top: 0; }
 .role .desc { display: none; }
 .cat.showdesc .role .desc { display: block; grid-column: 1 / -1; margin-top: -2px; }
@@ -95,7 +103,7 @@ section.view[hidden] { display: none; }
 .chip { font: inherit; font-size: 12.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper-2); color: var(--fg); cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
 .vacant { font-size: 13px; color: var(--warn); }
-@media (max-width: 560px) { .role, .cat.bw .role { grid-template-columns: 1fr; gap: 3px; align-items: start; } .role.head { display: none; } .col { display: flex; gap: 8px; align-items: baseline; } .col .cl { display: inline; flex: none; font-size: 11px; color: var(--fg-2); min-width: 3.5em; } }
+@media (max-width: 560px) { .role { grid-template-columns: 1fr; gap: 3px; align-items: start; } .role.head { display: none; } .col { display: flex; gap: 8px; align-items: baseline; } .col .cl { display: inline; flex: none; font-size: 11px; color: var(--fg-2); min-width: 3.5em; } }
 
 .tablewrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -368,9 +376,13 @@ function render() {
   $('view-roles').innerHTML = CATS.map(c => {
     const catAssigned = c.roles.filter(([id]) => assignedOf(id).length).length;
     const sum = c.assignOnly ? `${catAssigned} / ${c.roles.length} 岗已定` : `${catAssigned} / ${c.roles.length} 岗已定 · ${c.roles.reduce((n, [id]) => n + byRole[id].length, 0)} 人次有意愿`;
-    const head = c.assignOnly ? '<div class="role head"><span>岗位</span><span>承担人</span></div>' : '<div class="role head"><span>岗位</span><span>定岗</span><span>报名意愿</span></div>';
+    const head = c.assignOnly ? '' : '<div class="role head"><span>岗位</span><span>定岗</span><span>报名意愿</span></div>';
     return `<div class="cat${c.assignOnly ? ' bw' : ''}" data-cat="${c.id}"><h2><span>${c.name}</span><span class="sum">${sum}<button type="button" class="pill" data-desc="${c.id}">职责</button></span></h2>` + head +
-      c.roles.map(([id, name, desc]) => {
+      (c.assignOnly ? '<div class="bwgrid">' + c.roles.map(([id, name, desc]) => {
+        const asg = assignedOf(id);
+        return `<div class="bwcell"><div class="name" title="${esc(desc)}">${name}</div><div class="people">${asg.map(n => `<span class="chip on">${esc(n)}</span>`).join('') || '<span class="vacant">待定</span>'}${manage ? `<button class="link" data-assign="${id}">编辑</button>` : ''}</div><div class="desc">${desc}</div></div>`;
+      }).join('') + '</div>' : '') +
+      (c.assignOnly ? [] : c.roles).map(([id, name, desc]) => {
         const list = byRole[id], asg = assignedOf(id);
         const asgCol = `<div class="col"><div class="cl">${c.assignOnly ? '承担人' : '定岗'}</div><div class="people">${asg.map(n => `<span class="chip on">${esc(n)}</span>`).join('') || '<span class="vacant">待定</span>'}${manage ? `<button class="link" data-assign="${id}">编辑</button>` : ''}</div></div>`;
         const willCol = c.assignOnly ? '' : `<div class="col"><div class="cl">报名意愿 · ${list.length}</div><div class="people">${list.length ? list.map(p => chip(p)).join('') : '<span class="vacant">暂无</span>'}</div></div>`;
