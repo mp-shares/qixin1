@@ -7,7 +7,7 @@
 <title>栖心一班班级看板</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* Layout: sticky nav → masthead → ① 通知（公开表「通知」多条置顶：重要在前、到期自动消失、可关联日历事项(ref cal:id，显示下一次日期)或资料(res:id)；日历事项不自动进通知，只有班委置顶的才显示；没有通知则整块不显示）② 活动照片（snap carousel；没照片时一张封面）③ 班级日历（月视图 + 当月清单；公开表「日历」）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 班级资料（公开表「资料」链接列表；后端不可用时用页内 RESOURCES_DEFAULT）⑥ 全班入口 / 义工入口. 通知/日历/资料/定岗 都由班委在 班委.html#manage 维护（各 band 标题右侧的「编辑 ›」直达对应管理区块：#manage-notice / -cal / -res）. Content lives in PROJECTS / STAFF / RESOURCES_DEFAULT at the top of the script. */
+/* Layout: sticky nav → masthead → ① 通知（公开表「通知」多条置顶：重要在前、到期自动消失、可关联日历事项(ref cal:id，显示下一次日期)或资料(res:id)；日历事项不自动进通知，只有班委置顶的才显示；没有通知则整块不显示）② 活动照片（snap carousel；没照片时一张封面）③ 班级日历（月视图 + 当月清单；公开表「日历」）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 班级资料（公开表「资料」里勾了 home 的条目；一条没勾则全部；其余折进「全部资料 ›」；后端不可用时用页内 RESOURCES_DEFAULT）⑥ 全班入口 / 义工入口. 通知/日历/资料/定岗 都由班委在 班委.html#manage 维护（各 band 标题右侧的「编辑 ›」直达对应管理区块：#manage-notice / -cal / -res）. Content lives in PROJECTS / STAFF / RESOURCES_DEFAULT at the top of the script. */
 :root{
   --bg:#f4f5f8; --card:#ffffff; --ink:#1b2130; --muted:#6b7386; --line:#e0e4ec; --soft:#eef0f5;
   --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
@@ -167,6 +167,8 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .list{display:grid;grid-template-columns:minmax(0,1fr)}
 a.row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:12px 2px;border-top:1px solid var(--line);color:inherit;text-decoration:none;min-width:0}
 .list a.row:first-child{border-top:0;padding-top:4px}
+.list .more{font:inherit;font-size:13px;color:var(--accent);background:none;border:0;border-top:1px solid var(--line);padding:10px 2px 2px;cursor:pointer;text-align:left}
+.list .more:hover{text-decoration:underline}
 a.row:hover .t{color:var(--accent)}
 a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 .row .t{font-family:var(--display);font-size:16.5px;font-weight:700;line-height:1.3;transition:color .15s}
@@ -281,7 +283,15 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   $('projectCards').innerHTML = PROJECTS.map(function (p) { return card(p, false); }).join('');
   // 资料链接只放行 http(s) 和本站相对路径（表可被直接手改，后端校验之外再挡一层 javascript: 之类）
   var safeUrl = function (u) { u = String(u || '').trim(); return /^(https?:\/\/|[^:]*$)/i.test(u) ? u : '#'; };
-  function renderRes(items) { $('resCards').innerHTML = (items.length ? items : RESOURCES_DEFAULT).map(function (r) { return card({ t: r.title, d: r.note, url: safeUrl(r.url) }, false); }).join(''); }
+  // 资料：表里勾了 home 的才上看板；一条都没勾时显示全部。其余折在「全部资料 ›」里，点开就地展开
+  var resAll = [], resOpen = false;
+  function renderRes(items) {
+    resAll = items.length ? items : RESOURCES_DEFAULT;
+    var feat = resAll.filter(function (r) { return r.home; }), show = resOpen || !feat.length ? resAll : feat, rest = resAll.length - show.length;
+    $('resCards').innerHTML = show.map(function (r) { return card({ t: r.title, d: r.note, url: safeUrl(r.url) }, false); }).join('') +
+      (feat.length && feat.length < resAll.length ? '<button type="button" class="more" id="resMore">' + (resOpen ? '收起 ‹' : '全部资料 · ' + resAll.length + ' 项 ›') + '</button>' : '');
+    var m = $('resMore'); if (m) m.addEventListener('click', function () { resOpen = !resOpen; renderRes(resAll); });
+  }
   renderRes([]);
   $('staffCards').innerHTML = STAFF.map(function (p) { return card(p, true); }).join('');
 

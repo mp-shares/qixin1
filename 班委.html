@@ -271,6 +271,7 @@ footer { margin-top: 28px; color: var(--fg-2); font-size: 12px; line-height: 1.7
       <div class="field"><label class="lab" for="rUrl">链接</label><input type="text" id="rUrl" autocomplete="off" placeholder="https://… 或本站页面如 班费公示.html#rules" required></div>
       <div class="field"><label class="lab" for="rNote">一句话说明（可选）</label><input type="text" id="rNote" autocomplete="off"></div>
       <div class="field"><label class="lab" for="rSort">排序（数字小的在前）</label><input type="number" id="rSort" value="50"></div>
+      <div class="opts"><label class="opt"><input type="checkbox" id="rHome">在看板「班级资料」显示（没勾选任何一条时看板显示全部）</label></div>
       <div class="err" id="rErr" hidden></div>
     </div>
     <div class="dfoot"><div><button type="button" class="btn danger" id="rDel" hidden>删除</button></div><div class="right"><button type="button" class="btn" id="rcancel">取消</button><button type="submit" class="btn primary" id="rsave">保存</button></div></div>
@@ -480,14 +481,14 @@ $('cDel').addEventListener('click', async () => {
 });
 function renderResEd() {
   $('resTable').innerHTML = resItems.length
-    ? `<div class="tablewrap"><table><thead><tr><th>排序</th><th>标题</th><th>链接</th><th>说明</th><th></th></tr></thead><tbody>` +
-      resItems.map(i => `<tr><td>${i.sort}</td><td><b>${esc(i.title)}</b></td><td class="note"><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.url.length > 48 ? i.url.slice(0, 46) + '…' : i.url)}</a></td><td class="note">${esc(i.note)}</td><td style="white-space:nowrap"><button class="link" data-redit="${esc(i.id)}">编辑</button> <button class="link" data-pinres="${esc(i.id)}">${ntByRef('res:' + i.id) ? '已置顶' : '置顶'}</button></td></tr>`).join('') + '</tbody></table></div>'
+    ? `<div class="tablewrap"><table><thead><tr><th title="勾选 = 在看板显示；都没勾时看板显示全部">看板</th><th>排序</th><th>标题</th><th>链接</th><th>说明</th><th></th></tr></thead><tbody>` +
+      resItems.map(i => `<tr><td><input type="checkbox" data-rhome="${esc(i.id)}"${i.home ? ' checked' : ''} title="在看板显示"></td><td>${i.sort}</td><td><b>${esc(i.title)}</b></td><td class="note"><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.url.length > 48 ? i.url.slice(0, 46) + '…' : i.url)}</a></td><td class="note">${esc(i.note)}</td><td style="white-space:nowrap"><button class="link" data-redit="${esc(i.id)}">编辑</button> <button class="link" data-pinres="${esc(i.id)}">${ntByRef('res:' + i.id) ? '已置顶' : '置顶'}</button></td></tr>`).join('') + '</tbody></table></div>'
     : '<div class="empty" style="padding:18px">还没有资料链接，点「添加」录入（看板会先显示页内默认的几条）。</div>';
 }
 function openRes(id) {
   const i = id ? resItems.find(x => x.id === id) : null; resEditing = i ? i.id : null;
   $('rTitle').textContent = i ? '修改资料 · ' + i.title : '添加资料';
-  $('rName').value = i ? i.title : ''; $('rUrl').value = i ? i.url : ''; $('rNote').value = i ? i.note : ''; $('rSort').value = i ? i.sort : 50;
+  $('rName').value = i ? i.title : ''; $('rUrl').value = i ? i.url : ''; $('rNote').value = i ? i.note : ''; $('rSort').value = i ? i.sort : 50; $('rHome').checked = i ? !!i.home : false;
   $('rDel').hidden = !i; $('rDel').textContent = '删除'; $('rDel').dataset.armed = ''; $('rErr').hidden = true;
   $('rdlg').showModal();
 }
@@ -495,7 +496,7 @@ $('resAdd').addEventListener('click', () => openRes(null));
 $('rclose').addEventListener('click', () => $('rdlg').close()); $('rcancel').addEventListener('click', () => $('rdlg').close());
 $('rform').addEventListener('submit', async ev => {
   ev.preventDefault(); if (!API) return;
-  const item = { id: resEditing || undefined, title: $('rName').value.trim(), url: $('rUrl').value.trim(), note: $('rNote').value.trim(), sort: +$('rSort').value || 0 };
+  const item = { id: resEditing || undefined, title: $('rName').value.trim(), url: $('rUrl').value.trim(), note: $('rNote').value.trim(), sort: +$('rSort').value || 0, home: $('rHome').checked };
   $('rsave').disabled = true;
   try { const r = await apiPost({ action: 'resource_set', key: mkey, item }); if (!r.ok) throw new Error(r.error || '保存失败');
     const k = resItems.findIndex(x => x.id === r.item.id); if (k >= 0) resItems[k] = r.item; else resItems.push(r.item);
@@ -512,6 +513,15 @@ $('rDel').addEventListener('click', async () => {
   finally { b.disabled = false; }
 });
 document.addEventListener('click', e => { const c = e.target.closest('[data-cedit]'); if (c) openCal(c.dataset.cedit); const r = e.target.closest('[data-redit]'); if (r) openRes(r.dataset.redit); });
+// 资料表里直接勾「看板」：整条回写（后端按 item 覆盖）
+document.addEventListener('change', async e => {
+  const cb = e.target.closest('[data-rhome]'); if (!cb) return;
+  const x = resItems.find(i => i.id === cb.dataset.rhome); if (!x) return;
+  cb.disabled = true;
+  try { const r = await apiPost({ action: 'resource_set', key: mkey, item: Object.assign({}, x, { home: cb.checked }) }); if (!r.ok) throw new Error(r.error || '保存失败'); Object.assign(x, r.item); toast(cb.checked ? '已加到看板' : '已从看板收起'); }
+  catch (err) { cb.checked = !cb.checked; toast('没保存成：' + err.message); }
+  finally { cb.disabled = false; }
+});
 
 // 班级名单管理（班委）
 // 名单 ↔ 日历生日行：id 为 bd-<pid>；首批灌入的生日行 id 是 b01…b22，对应名单 p01…p22；再退一步按称呼匹配
