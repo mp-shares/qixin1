@@ -7,7 +7,7 @@
 <title>栖心一班班级看板</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* Layout: sticky nav → masthead → ① 通知·近期（公开表「通知」多条置顶：重要在前、到期自动消失、可关联日历事项(ref cal:id，显示日期并从近期 chips 里去重)或资料(res:id) + 日历近 30 天 chips；都空则整块不显示）② 活动照片（snap carousel；没照片时一张封面）③ 班级日历（月视图 + 当月清单；公开表「日历」）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 班级资料（公开表「资料」链接列表；后端不可用时用页内 RESOURCES_DEFAULT）⑥ 全班入口 / 义工入口. 通知/日历/资料/定岗 都由班委在 微岗位报名.html#manage 维护. Content lives in PROJECTS / STAFF / RESOURCES_DEFAULT at the top of the script. */
+/* Layout: sticky nav → masthead → ① 通知·近期（公开表「通知」多条置顶：重要在前、到期自动消失、可关联日历事项(ref cal:id，显示日期并从近期 chips 里去重)或资料(res:id) + 日历近 30 天 chips；都空则整块不显示）② 活动照片（snap carousel；没照片时一张封面）③ 班级日历（月视图 + 当月清单；公开表「日历」）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 班级资料（公开表「资料」链接列表；后端不可用时用页内 RESOURCES_DEFAULT）⑥ 全班入口 / 义工入口. 通知/日历/资料/定岗 都由班委在 微岗位报名.html#manage 维护（各 band 标题右侧的「编辑 ›」直达对应管理区块：#manage-notice / -cal / -res）. Content lives in PROJECTS / STAFF / RESOURCES_DEFAULT at the top of the script. */
 :root{
   --bg:#f4f5f8; --card:#ffffff; --ink:#1b2130; --muted:#6b7386; --line:#e0e4ec; --soft:#eef0f5;
   --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
@@ -60,6 +60,9 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .band>h2::before{content:"";width:6px;height:20px;border-radius:3px;background:var(--accent)}
 .band>h2 small{font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.06em;margin-left:auto}
 .band.staff>h2::before{background:var(--lock)}
+.band>h2 .edit{margin-left:auto;font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.04em;text-decoration:none;white-space:nowrap}
+.band>h2 small~.edit,.band>h2 .edit~.edit{margin-left:0}
+.band>h2 .edit:hover{color:var(--accent);text-decoration:underline}
 
 /* 通知栏 */
 .notice{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:start;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:14px;padding:14px 18px;box-shadow:var(--shadow);min-width:0}
@@ -198,13 +201,13 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   </header>
 
   <section class="band" id="news" hidden>
-    <h2>通知 · 近期</h2>
+    <h2>通知 · 近期 <a class="edit" href="微岗位报名.html#manage-notice">编辑 ›</a></h2>
     <div class="notices" id="notices" hidden></div>
     <div class="soon" id="calSoon" hidden></div>
   </section>
 
   <section class="band" id="photos">
-    <h2>活动照片</h2>
+    <h2>活动照片 <a class="edit" id="photoEdit" href="#" target="_blank" rel="noopener">上传照片 ↗</a></h2>
     <div class="carousel">
       <div class="track" id="track" aria-live="polite"></div>
       <div class="dots" id="dots"></div>
@@ -212,7 +215,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   </section>
 
   <section class="band" id="cal">
-    <h2>班级日历 <small>生日 · 班级事项</small></h2>
+    <h2>班级日历 <small>生日 · 班级事项</small><a class="edit" href="微岗位报名.html#manage-cal">编辑 ›</a></h2>
     <div class="cal">
       <div class="cal-head"><b id="calTitle"></b><button type="button" id="calPrev" aria-label="上个月">‹</button><button type="button" id="calToday">今天</button><button type="button" id="calNext" aria-label="下个月">›</button></div>
       <div class="cal-grid" id="calGrid"></div>
@@ -221,12 +224,12 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   </section>
 
   <section class="band" id="show">
-    <h2>班级公示</h2>
+    <h2>班级公示 <a class="edit" href="班费账本.html">记账 ›</a><a class="edit" href="微岗位报名.html#manage">定岗 ›</a></h2>
     <div class="stats" id="stats"></div>
   </section>
 
   <section class="band" id="res">
-    <h2>班级资料</h2>
+    <h2>班级资料 <a class="edit" href="微岗位报名.html#manage-res">编辑 ›</a></h2>
     <div class="list" id="resCards"></div>
   </section>
 
@@ -314,6 +317,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   // ① 照片轮播
   var fee = null, signups = null, assigned = {}, photos = [];
   var PHOTO_ALBUM = 'https://drive.google.com/drive/folders/1VyvDqOVdxgjbgbljwmcKTbEDVvTFg0DP';
+  document.getElementById('photoEdit').href = PHOTO_ALBUM;
   function photoSlide(p) {
     var src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(p.id) + '&sz=w1000';
     return '<div class="slide photo"><img data-src="' + src + '" alt="' + esc(p.name) + '"><div class="cap"><b>' + esc(p.name) + '</b><a href="' + PHOTO_ALBUM + '" target="_blank" rel="noopener">照片上传 · 更多照片 ↗</a></div></div>';

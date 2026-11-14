@@ -681,6 +681,13 @@ document.addEventListener('click', e => {
   const pc = e.target.closest('[data-pincal]'); if (pc) { const c = calItems.find(x => x.id === pc.dataset.pincal), ex = ntByRef('cal:' + c.id); if (ex) openNt(ex); else openNt(null, { text: c.title + (c.time ? ' ' + c.time : ''), until: ymd(nextOccDate(c)), ref: 'cal:' + c.id }); return; }
   const pr = e.target.closest('[data-pinres]'); if (pr) { const x = resItems.find(x => x.id === pr.dataset.pinres), ex = ntByRef('res:' + x.id); if (ex) openNt(ex); else openNt(null, { text: x.title, note: x.note, link: x.url, ref: 'res:' + x.id }); }
 });
+// #manage 及 #manage-notice / -cal / -res / -roster：进管理模式后滚到对应区块
+const isManageHash = () => /^#manage(-|$)/.test(location.hash);
+function gotoManageSection() {
+  const id = { notice: 'noticeEd', cal: 'calEd', res: 'resEd', roster: 'rosterEd' }[location.hash.slice(8)]; if (!id) return;
+  if (id === 'rosterEd') $('rsWrap').open = true;
+  requestAnimationFrame(() => $(id).scrollIntoView({ behavior: 'smooth', block: 'start' }));
+}
 function setMode(on) {
   manage = on;
   $('manageBtn').hidden = on; $('exitBtn').hidden = !on; $('copyBtn').hidden = !on; $('addBtn').hidden = !on;
@@ -697,12 +704,12 @@ $('mform').addEventListener('submit', async e => {
   $('mgo').disabled = true;
   try {
     const r = await apiPost({ action: 'signup_ping', key: k });
-    if (r && r.ok && r.auth) { mkey = k; try { localStorage.setItem('wgw-key', k); } catch (_) {} $('mdlg').close(); setMode(true); toast('已进入班委管理'); load().catch(() => {}); }
+    if (r && r.ok && r.auth) { mkey = k; try { localStorage.setItem('wgw-key', k); } catch (_) {} $('mdlg').close(); setMode(true); toast('已进入班委管理'); load().then(gotoManageSection).catch(() => {}); }
     else { $('merr').textContent = '口令不对。'; $('merr').hidden = false; }
   } catch (_) { $('merr').textContent = '连不上服务器。'; $('merr').hidden = false; }
   finally { $('mgo').disabled = false; }
 });
-$('exitBtn').addEventListener('click', () => { mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} if (location.hash === '#manage') { history.replaceState(null, '', location.pathname); location.reload(); return; } setMode(false); });
+$('exitBtn').addEventListener('click', () => { mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} if (isManageHash()) { history.replaceState(null, '', location.pathname); location.reload(); return; } setMode(false); });
 $('addBtn').addEventListener('click', () => openEditor(null));
 $('closeBtn').addEventListener('click', () => $('dlg').close());
 $('cancelBtn').addEventListener('click', () => $('dlg').close());
@@ -774,7 +781,7 @@ async function apiPost(body) {
   return r.json();
 }
 async function load() {
-  const r = (manage || location.hash === '#manage') && mkey ? await apiPost({ action: 'signups', key: mkey }) : await QX.api('signups');
+  const r = (manage || isManageHash()) && mkey ? await apiPost({ action: 'signups', key: mkey }) : await QX.api('signups');
   if (!r.ok) throw new Error(r.error || '读取失败');
   people = r.people || []; assigned = r.assigned || {}; roster = r.roster || []; render(); if (manage) renderRoster(); setStatus('on', '已连接 · ' + people.length + ' 人');
 }
@@ -784,8 +791,8 @@ else {
   setStatus('ro', '读取中…');
   (async () => {
     // 班委入口（#manage）：只问班委口令，不经班级口令
-    if (location.hash === '#manage') {
-      if (mkey) { try { const r = await apiPost({ action: 'signup_ping', key: mkey }); if (r && r.ok && r.auth) { setMode(true); await load(); return; } } catch (_) {} mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} }
+    if (isManageHash()) {
+      if (mkey) { try { const r = await apiPost({ action: 'signup_ping', key: mkey }); if (r && r.ok && r.auth) { setMode(true); await load(); gotoManageSection(); return; } } catch (_) {} mkey = ''; try { localStorage.removeItem('wgw-key'); } catch (_) {} }
       setStatus('ro', '请输入班委口令'); $('manageBtn').click(); return;
     }
     // 全班入口：班级口令后进入展示模式；本机已有有效班委口令则直接进管理
