@@ -7,7 +7,7 @@
 <title>栖心一班班级看板</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
 <style>
-/* Layout: sticky nav → masthead → ① 通知·近期（公开表「通知」多条置顶：重要在前、到期自动消失、可关联日历事项(ref cal:id，显示日期并从近期 chips 里去重)或资料(res:id) + 日历近 30 天 chips；都空则整块不显示）② 活动照片（snap carousel；没照片时一张封面）③ 班级日历（月视图 + 当月清单；公开表「日历」）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 班级资料（公开表「资料」链接列表；后端不可用时用页内 RESOURCES_DEFAULT）⑥ 全班入口 / 义工入口. 通知/日历/资料/定岗 都由班委在 班委.html#manage 维护（各 band 标题右侧的「编辑 ›」直达对应管理区块：#manage-notice / -cal / -res）. Content lives in PROJECTS / STAFF / RESOURCES_DEFAULT at the top of the script. */
+/* Layout: sticky nav → masthead → ① 通知（公开表「通知」多条置顶：重要在前、到期自动消失、可关联日历事项(ref cal:id，显示下一次日期)或资料(res:id)；日历事项不自动进通知，只有班委置顶的才显示；没有通知则整块不显示）② 活动照片（snap carousel；没照片时一张封面）③ 班级日历（月视图 + 当月清单；公开表「日历」）④ 班级公示（班费一卡 + 班委和微岗位一卡）⑤ 班级资料（公开表「资料」链接列表；后端不可用时用页内 RESOURCES_DEFAULT）⑥ 全班入口 / 义工入口. 通知/日历/资料/定岗 都由班委在 班委.html#manage 维护（各 band 标题右侧的「编辑 ›」直达对应管理区块：#manage-notice / -cal / -res）. Content lives in PROJECTS / STAFF / RESOURCES_DEFAULT at the top of the script. */
 :root{
   --bg:#f4f5f8; --card:#ffffff; --ink:#1b2130; --muted:#6b7386; --line:#e0e4ec; --soft:#eef0f5;
   --accent:#36479f; --accent-ink:#ffffff; --accent-soft:#e6e9f7; --accent-deep:#263378;
@@ -99,11 +99,6 @@ nav.top a.nl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dots button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* ③ 班级日历：近期提醒条 + 月视图（周一起）+ 当月清单 */
-.soon{display:flex;gap:8px;flex-wrap:wrap}
-.soon span{font-size:13px;padding:5px 11px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--ink);display:inline-flex;gap:7px;align-items:center;min-width:0}
-.soon span b{font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;font-size:12.5px;white-space:nowrap}
-.soon span i{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
-.soon span.b{border-color:color-mix(in srgb,var(--bday) 45%,var(--line))} .soon span.b i{background:var(--bday)}
 .cal{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px 12px;box-shadow:var(--shadow);display:grid;gap:10px;min-width:0}
 .cal-head{display:flex;align-items:center;gap:6px}
 .cal-head b{font-family:var(--display);font-size:18px;font-weight:700;margin-right:auto;font-variant-numeric:tabular-nums}
@@ -201,9 +196,8 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   </header>
 
   <section class="band" id="news" hidden>
-    <h2>通知 · 近期 <a class="edit" href="班委.html#manage-notice">编辑 ›</a></h2>
+    <h2>通知 <a class="edit" href="班委.html#manage-notice">编辑 ›</a></h2>
     <div class="notices" id="notices" hidden></div>
-    <div class="soon" id="calSoon" hidden></div>
   </section>
 
   <section class="band" id="photos">
@@ -292,17 +286,16 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   $('staffCards').innerHTML = STAFF.map(function (p) { return card(p, true); }).join('');
 
   // 通知栏
-  function syncNews() { $('news').hidden = $('notices').hidden && $('calSoon').hidden; }
+  function syncNews() { $('news').hidden = $('notices').hidden; }
   // 置顶通知：重要在前；关联日历事项的前面带日期；关联资料/带链接的给「查看」
-  var notices = [], pinnedCal = {};
+  var notices = [];
   function nextOcc(it) { var y = today0.getFullYear(), hits = occurrences(it, y, y + 1).filter(function (o) { return o.d >= today0; }); return hits.length ? hits[0].d : null; }
   function renderNotices() {
-    pinnedCal = {};
     var html = notices.map(function (n) {
       var dateLbl = '', ref = String(n.ref || '');
       if (ref.indexOf('cal:') === 0) {
         var it = calItems.filter(function (c) { return c.id === ref.slice(4); })[0];
-        if (it) { pinnedCal[it.id] = 1; var d = nextOcc(it); if (d) dateLbl = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + WD[d.getDay()] + (it.time ? ' ' + it.time : ''); }
+        if (it) { var d = nextOcc(it); if (d) dateLbl = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + WD[d.getDay()] + (it.time ? ' ' + it.time : ''); }
       }
       var links = String(n.link || '').split('\n').map(function (l) { l = l.trim(); var i = l.lastIndexOf(' | '); return !l ? null : i > 0 ? { t: l.slice(0, i).trim(), u: l.slice(i + 3).trim() } : { t: '', u: l }; }).filter(Boolean);   // link 列每行一条「名称 | 链接」
       var small = [n.note ? esc(n.note) : ''].filter(Boolean).join('') + links.map(function (l) { return '<a href="' + esc(safeUrl(l.u)) + '"' + (/^https?:/.test(l.u) ? ' target="_blank" rel="noopener"' : '') + '>' + esc(l.t || '查看') + ' ›</a>'; }).join('');
@@ -312,7 +305,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
   }
   function renderNotice(r) {   // 兼容旧后端：只有 text 一条
     notices = Array.isArray(r.items) ? r.items : (r.text ? [{ text: r.text }] : []);
-    renderNotices(); renderSoon();
+    renderNotices();
   }
 
   // ① 照片轮播
@@ -397,19 +390,6 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
     if (sel) out.push('<button type="button" class="all" id="calAll">看整月 ›</button>');
     $('calList').innerHTML = out.join('');
   }
-  function renderSoon() {
-    var end = new Date(today0); end.setDate(end.getDate() + 30);
-    var occ = [], seenWeekly = {};
-    calItems.forEach(function (it) { if (pinnedCal[it.id]) return; occurrences(it, today0.getFullYear(), today0.getFullYear() + 1).forEach(function (o) { if (o.d >= today0 && o.d < end) occ.push(o); }); });
-    occ.sort(byTime);
-    occ = occ.filter(function (o) { if (o.it.repeat !== 'weekly') return true; if (seenWeekly[o.it.id]) return false; return seenWeekly[o.it.id] = true; }).slice(0, 8);
-    $('calSoon').hidden = !occ.length; syncNews();
-    $('calSoon').innerHTML = occ.map(function (o) {
-      var days = Math.round((o.d - today0) / 864e5), when = days === 0 ? '今天' : days === 1 ? '明天' : (o.d.getMonth() + 1) + '/' + o.d.getDate() + ' ' + WD[o.d.getDay()];
-      var b = o.it.kind === 'birthday';
-      return '<span class="' + (b ? 'b' : '') + '"><i></i><b>' + when + '</b>' + esc(o.it.title) + (b ? ' 生日' : (/^\d{1,2}:\d{2}$/.test(o.it.time || '') ? ' ' + esc(o.it.time) : '')) + '</span>';
-    }).join('');
-  }
   $('calPrev').addEventListener('click', function () { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); selDay = null; renderCal(); });
   $('calNext').addEventListener('click', function () { view = new Date(view.getFullYear(), view.getMonth() + 1, 1); selDay = null; renderCal(); });
   $('calToday').addEventListener('click', function () { view = new Date(now.getFullYear(), now.getMonth(), 1); selDay = null; renderCal(); });
@@ -492,7 +472,7 @@ a.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-ra
 
   if (API) QX.ready().then(function () {
     QX.api('notice').then(function (r) { if (r && r.ok) renderNotice(r); }).catch(function () {});
-    QX.api('calendar').then(function (r) { calLoaded = true; if (r && r.ok) calItems = r.items || []; else calErr = true; renderCal(); renderNotices(); renderSoon(); }).catch(function () { calLoaded = true; calErr = true; renderCal(); });
+    QX.api('calendar').then(function (r) { calLoaded = true; if (r && r.ok) calItems = r.items || []; else calErr = true; renderCal(); renderNotices(); }).catch(function () { calLoaded = true; calErr = true; renderCal(); });
     QX.api('summary').then(function (r) { fee = r && r.ok ? r.summary : null; renderStats(); }).catch(function () {});
     QX.api('signups').then(function (r) { signups = r && r.ok ? r.people : null; assigned = (r && r.assigned) || {}; renderStats(); }).catch(function () {});
     QX.api('photos').then(function (r) { photos = r && r.ok ? (r.photos || []) : []; renderCarousel(); }).catch(function () {});
